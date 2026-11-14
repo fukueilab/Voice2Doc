@@ -44,6 +44,9 @@ def find_improvements(current: dict, baseline: dict) -> list:
 
 
 def main(argv: list) -> int:
+    # 日本語を表示するので、コンソールの文字コードが cp1252 などの環境（CI の Windows）でも落ちないようにする
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     current = current_counts()
     if "--update" in argv:
         BASELINE_FILE.write_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

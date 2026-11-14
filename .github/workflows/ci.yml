@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Windows runner's console and default file encoding are cp1252; Japanese output and files need UTF-8
+  PYTHONUTF8: "1"
+
 jobs:
   test:
     runs-on: windows-latest

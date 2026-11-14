@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+env:
+  # Windows ランナーの既定の文字コード（cp1252）では日本語の出力・ファイルが扱えないため UTF-8 にする
+  PYTHONUTF8: "1"
+
 jobs:
   build:
     runs-on: windows-latest
