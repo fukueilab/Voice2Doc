@@ -59,6 +59,7 @@ English version: [install-guide.en.md](install-guide.en.md)
 
 | 症状 | 対処 |
 |---|---|
+| Microsoft Edge で「一般的にダウンロードされていません」と表示され、保存されない | インストーラーが新しく、コード署名もないため、Edge の評判チェックで止められる（ウイルスと判定されたわけではない）。ダウンロードの一覧で、ファイルの横の「…」（その他の操作）→「保存」を押し、確認が出たら「保持する」を選ぶ（表示は Edge のバージョンで少し違う）。Firefox と Chrome ではそのままダウンロードできる |
 | 「Windows によって PC が保護されました」と表示される（SmartScreen） | インストーラーはコード署名されていないため表示される。このリポジトリの [Releases](https://github.com/fukueilab/Voice2Doc/releases) から入手したものなら「詳細情報」→「実行」で進める |
 | 「スマート アプリ コントロールがブロックしました」と表示され、管理者として実行しても起動しない | Windows 11 のスマート アプリ コントロールが、署名のないアプリを止めている（許可する方法は無い）。導入するには「設定」→「プライバシーとセキュリティ」→「Windows セキュリティ」→「アプリとブラウザーの制御」→「スマート アプリ コントロールの設定」で**オフ**にしてから、もう一度インストーラーを実行する。**注意: 多くの Windows のバージョンでは、一度オフにすると Windows のリセット（再インストール）をしない限りオンに戻せない。** |
 | インストール完了画面で「一部のコンポーネントでエラーが発生しました」と表示される | Visual C++ RedistributableまたはWebView2 Runtimeの自動インストールに失敗している。以下から手動インストールする。<br>・VC++ Redistributable: https://aka.ms/vs/17/release/vc_redist.x64.exe <br>・WebView2 Runtime: https://developer.microsoft.com/en-us/microsoft-edge/webview2/ |

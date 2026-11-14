@@ -98,6 +98,10 @@ Hugging Face on first use, and a different Whisper model only when you choose it
    is still missing it links to Vibe again, and **Check again** (or **Specify the location of vibe-server.exe**) picks it up
    without restarting the app. Wait for the model downloads to finish before transcribing.
 
+> **Downloading in Microsoft Edge**: because the installer is new and not code-signed, Edge may say the file "isn't commonly downloaded"
+> and not save it. This is Edge's reputation check, not a virus detection. In the download panel, click **… (More actions)** next to the
+> file and choose **Keep** (保存), then confirm if asked (**Keep anyway**; the wording varies with the Edge version). Firefox and Chrome download it directly.
+>
 > **Windows SmartScreen**: the installer is not code-signed, so Windows may show "Windows protected your PC".
 > Click **More info → Run anyway** if you downloaded it from this repository's [Releases page](https://github.com/fukueilab/Voice2Doc/releases).
 >
