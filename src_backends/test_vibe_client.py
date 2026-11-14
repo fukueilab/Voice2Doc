@@ -153,6 +153,10 @@ class TestStartVibe:
         fake_bin = tmp_path / "vibe-server.exe"
         fake_bin.write_text("")
         monkeypatch.setattr(vibe_client, "find_vibe_binary", lambda custom_path="": fake_bin)
+        # モデルファイルがある状態にする（実機のモデルに頼らない。CI にはモデルが無い）
+        fake_model = tmp_path / "ggml-large-v3-turbo.bin"
+        fake_model.write_text("")
+        monkeypatch.setattr(vibe_client, "find_model_file", lambda name, vibe_bin_dir=None: fake_model)
         with patch.object(vibe_client.subprocess, "Popen", side_effect=OSError("no such file")):
             with pytest.raises(RuntimeError, match="起動に失敗"):
                 vibe_client.start_vibe()

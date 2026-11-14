@@ -38,7 +38,11 @@ class TestStartVibeModelChange:
         assert vibe_client.start_vibe(model_name="large-v3-turbo") == 5555
         assert running_vibe["stopped"] == 0
 
-    def test_different_model_restarts_the_server(self, running_vibe):
+    def test_different_model_restarts_the_server(self, running_vibe, tmp_path, monkeypatch):
+        # 新しいモデルのファイルがある状態にする（実機のモデルに頼らない。CI にはモデルが無い）
+        fake_model = tmp_path / "ggml-tiny.bin"
+        fake_model.write_text("")
+        monkeypatch.setattr(vibe_client, "find_model_file", lambda name, vibe_bin_dir=None: fake_model)
         # 停止のあと、起動し直そうとして vibe-server.exe の検出（差し替え済み）で止まる
         with pytest.raises(RuntimeError):
             vibe_client.start_vibe(model_name="tiny")
