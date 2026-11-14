@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>話書き - Voice2Doc</title>
+  <!-- 起動の保険: スクリプトの読み込み失敗・起動中のエラーで画面が白いままにならないよう、案内と再読み込みボタンを出す。
+       文言は i18n.js が読み込めない場合にも出せるよう、ここに日英を直接持つ -->
+  <script>
+  (function () {
+    // アプリで選んだ表示言語（i18n.js が保存）を優先し、無ければ OS（ブラウザー）の言語で決める
+    var saved = null;
+    try { saved = localStorage.getItem('voice2doc.ui_language'); } catch (e) { /* 読めなければ OS の言語 */ }
+    var ja = saved ? saved === 'ja' : (navigator.language || '').toLowerCase().indexOf('ja') === 0;
+    var msg = ja ? ['画面を表示できませんでした', '読み込み中にエラーが起きました。再読み込みしても直らないときは、アプリを一度終了してから起動し直してください。', '再読み込み']
+                 : ['The window could not be displayed', 'An error occurred while loading. If reloading does not help, close the app and start it again.', 'Reload'];
+    function show(detail) {
+      if (window.__v2dBooted || document.getElementById('early-error-panel')) return;
+      var box = document.createElement('div');
+      box.id = 'early-error-panel';
+      box.setAttribute('data-early-error', '1');
+      box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#fff;color:#222;font-family:Segoe UI,Meiryo,sans-serif;text-align:center;padding:24px';
+      var inner = document.createElement('div');
+      inner.style.cssText = 'max-width:520px';
+      var h = document.createElement('h1'); h.style.cssText = 'font-size:20px;margin:0 0 12px'; h.textContent = msg[0];
+      var p = document.createElement('p'); p.style.cssText = 'line-height:1.6;font-size:14px'; p.textContent = msg[1];
+      var d = document.createElement('p'); d.style.cssText = 'font-size:12px;opacity:.7;word-break:break-all'; d.textContent = String(detail || '').slice(0, 300);
+      var b = document.createElement('button'); b.style.cssText = 'margin-top:14px;padding:8px 22px;font-size:14px;border:0;border-radius:6px;background:#6c4cf1;color:#fff;cursor:pointer'; b.textContent = msg[2];
+      b.onclick = function () { location.reload(); };
+      inner.appendChild(h); inner.appendChild(p); inner.appendChild(d); inner.appendChild(b);
+      box.appendChild(inner);
+      (document.body || document.documentElement).appendChild(box);
+    }
+    window.addEventListener('error', function (e) {
+      // スクリプト・CSS の読み込み失敗は e.target が要素になる（バブリングしないのでキャプチャで拾う）
+      var t = e.target;
+      if (t && t !== window && t.tagName) {
+        // 読み込み失敗はスクリプトとCSSだけを対象にする（画像などの軽微な失敗で画面を覆わない）
+        if (t.tagName === 'SCRIPT' || t.tagName === 'LINK') show('load failed: ' + (t.src || t.href));
+        return;
+      }
+      show(e.message || 'error');
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) {
+      show(e.reason && e.reason.message ? e.reason.message : e.reason);
+    });
+  })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 起動オーバーレイ -->
+  <div class="startup-overlay" id="startup-overlay">
+    <div class="startup-content">
+      <div class="startup-spinner"></div>
+      <div class="startup-text" data-i18n="idx.startup_text">起動中...</div>
+      <div class="startup-detail" id="startup-detail" data-i18n="idx.startup_detail">サーバーを起動しています</div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- 上部ヘッダー（左=題名、右=状態・画面切替・版） -->
+    <header class="app-header" id="app-header">
+      <div class="app-brand">
+        <span class="app-title" data-i18n="idx.app_title">🎤 話書き</span>
+        <span class="app-subtitle" data-i18n="idx.app_subtitle">音声・動画・テキストから文章を自動生成</span>
+      </div>
+      <span class="app-status" id="app-status" data-i18n="idx.app_status">待機中</span>
+      <nav class="app-nav" aria-label="画面の切り替え" data-i18n-aria-label="idx.app_nav_aria_label">
+        <button type="button" class="menu-item active" data-page="file-input" data-i18n="idx.file_input">処理メニュー</button>
+        <button type="button" class="menu-item" data-page="history" data-i18n="idx.history">処理履歴</button>
+        <button type="button" class="menu-item" data-page="settings" data-i18n="idx.settings">設定</button>
+      </nav>
+      <div class="app-meta">
+        <span class="version"></span>
+        <a href="https://www.8asue.com/fukuei/" target="_blank" class="company-link" data-i18n="idx.company_link">福栄ラボ</a>
+      </div>
+    </header>
+
+    <!-- 右メイン領域 -->
+    <main class="main-content" id="main-content">
+      <!-- ファイル入力ページ -->
+      <div class="page active" id="page-file-input">
+        <div class="page-header">
+          <h1 data-i18n="idx.h1">📤 処理メニュー</h1>
+          <div class="page-description-row">
+            <p class="page-description" id="file-input-description" data-i18n="idx.file_input_description">使用する処理を選択してください</p>
+            <p class="page-description current-models" id="current-models" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <!-- 状態バナー（開始画面のみ表示するダッシュボード） -->
+        <div class="dashboard" id="dashboard-top">
+          <div class="banner banner-warn" id="status-banner" style="display:none;"></div>
+        </div>
+
+        <!-- プロンプト選択ビュー -->
+        <div class="prompt-selector" id="prompt-selector">
+          <div class="prompt-card-list" id="prompt-card-list"></div>
+        </div>
+
+        <!-- ファイル入力ビュー（プロンプト選択後に表示） -->
+        <div class="file-input-view" id="file-input-view" style="display:none;">
+          <div class="selected-prompt-bar">
+            <span class="selected-prompt-label" data-i18n="idx.selected_prompt_label">選択中プロンプト:</span>
+            <span class="selected-prompt-name" id="selected-prompt-name"></span>
+            <button class="btn btn-secondary btn-sm" id="btn-change-prompt" data-i18n="idx.btn_change_prompt">変更</button>
+          </div>
+
+          <!-- ドロップゾーン -->
+          <div class="input-mode-tabs">
+            <button class="input-mode-tab active" data-mode="file" data-i18n="idx.file">ファイル</button>
+            <button class="input-mode-tab" data-mode="text" data-i18n="idx.text">テキスト</button>
+          </div>
+
+          <!-- ファイル入力モード -->
+          <div class="input-mode-content active" id="mode-file">
+            <div class="drop-zone" id="drop-zone">
+              <div class="drop-zone-content">
+                <span class="drop-icon">📁</span>
+                <p class="drop-text" data-i18n="idx.drop_text">音声・動画・テキストファイルをここにドラッグ</p>
+                <p class="drop-hint" data-i18n="idx.drop_hint">対応形式: WAV, MP3, AAC, M4A, OGG, FLAC, MP4, AVI, MOV, MKV, TXT, MD</p>
+                <p class="drop-limit" data-i18n="idx.drop_limit">最大10ファイル / 合計1GB</p>
+                <input type="file" id="file-input" multiple accept=".wav,.mp3,.aac,.m4a,.ogg,.flac,.mp4,.avi,.mov,.mkv,.wmv,.flv,.webm,.m4v,.txt,.md" hidden>
+                <button class="btn btn-secondary" id="btn-select-files" data-i18n="idx.btn_select_files">ファイルを選択</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- テキスト入力モード -->
+          <div class="input-mode-content" id="mode-text" style="display:none;">
+            <div class="text-input-container">
+              <textarea id="text-input-area" rows="12" placeholder="ここにテキストを入力してください..." data-i18n-placeholder="idx.text_input_area_placeholder"></textarea>
+              <div class="text-input-actions">
+                <button class="btn btn-primary" id="btn-send-text" data-i18n="idx.btn_send_text">テキストを処理</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ファイルリスト -->
+          <div class="file-list-container" id="file-list-container" style="display:none;">
+            <div class="file-list-header">
+              <h2 data-i18n="idx.h2">選択済みファイル</h2>
+              <span class="file-count" id="file-count" data-i18n="idx.file_count">0ファイル / 0MB</span>
+            </div>
+            <ul class="file-list" id="file-list"></ul>
+            <div class="file-list-actions">
+              <button class="btn btn-danger" id="btn-clear-all" data-i18n="idx.btn_clear_all">すべて削除</button>
+              <button class="btn btn-primary" id="btn-start-process" data-i18n="idx.btn_start_process">処理開始</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 処理進捗 -->
+        <!-- 画面中央のダイアログ。表示/非表示は #progress-container の display で切り替える -->
+        <div class="progress-container progress-overlay" id="progress-container" style="display:none;">
+          <div class="progress-dialog" role="dialog" aria-live="polite" aria-labelledby="progress-title">
+            <h2 id="progress-title" data-i18n="idx.progress_title">処理中...</h2>
+            <div class="progress-bar-wrapper">
+              <div class="progress-bar" id="progress-bar">
+                <span class="progress-text" id="progress-text">0%</span>
+              </div>
+            </div>
+            <p class="progress-status" id="progress-status" data-i18n="idx.progress_status">準備中...</p>
+            <p class="progress-detail" id="progress-detail"></p>
+            <p class="audio-duration" id="audio-duration" style="display:none;"></p>
+            <div class="streaming-output" id="streaming-output" style="display:none;">
+              <label data-i18n="idx.label">AI生成中...</label>
+              <div class="streaming-text" id="streaming-text"></div>
+            </div>
+            <div class="progress-actions">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-process" data-i18n="idx.btn_cancel_process">処理を中止</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 結果表示 -->
+        <div class="result-container" id="result-container" style="display:none;">
+          <div class="result-header">
+            <h2 data-i18n="idx.h22">✅ 処理完了</h2>
+            <button class="btn btn-primary" id="btn-new-process-top" data-i18n="idx.btn_new_process_top">新しい処理を開始</button>
+          </div>
+          <div class="result-error-actions" id="result-error-actions" style="display:none;">
+            <button class="btn btn-primary" id="btn-retry" data-i18n="idx.btn_retry">🔄 リトライ</button>
+            <button class="btn btn-secondary" id="btn-new-process-error" data-i18n="idx.btn_new_process_top">新しい処理を開始</button>
+          </div>
+          <div class="result-content" id="result-content"></div>
+          <button class="btn btn-primary" id="btn-new-process" data-i18n="idx.btn_new_process_top">新しい処理を開始</button>
+        </div>
+        <!-- 一覧: 最近の処理結果・今回の起動中のエラー（開始画面のみ表示） -->
+        <div class="dashboard" id="dashboard-lists">
+          <section class="list-section">
+            <h3 data-i18n="idx.h3">最近の処理結果</h3>
+            <div class="list-box" id="recent-results-list"><p class="list-empty" data-i18n="idx.list_empty">まだありません</p></div>
+          </section>
+          <section class="list-section">
+            <h3 data-i18n="idx.h32">エラー</h3>
+            <div class="list-box" id="recent-errors-list"><p class="list-empty" data-i18n="idx.list_empty">まだありません</p></div>
+          </section>
+        </div>
+
+      </div>
+
+      <!-- 処理履歴ページ -->
+      <div class="page" id="page-history">
+        <div class="page-header">
+          <h1 data-i18n="idx.h12">📋 処理履歴</h1>
+          <p class="page-description" data-i18n="idx.page_description">過去の処理結果を確認できます</p>
+        </div>
+        <button type="button" class="btn btn-secondary btn-open-output-folder" id="btn-open-output-folder" data-i18n="idx.btn_open_output_folder">📂 処理結果の保存フォルダーを開く</button>
+        <div class="history-filter-bar" id="history-filter-bar" style="display:none;">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="history-search" data-i18n="idx.label2">🔍 テキスト検索</label>
+              <input type="text" id="history-search" placeholder="ファイル名・タイトル・本文で検索..." data-i18n-placeholder="idx.history_search_placeholder">
+            </div>
+            <div class="filter-group">
+              <label for="history-date-from" data-i18n="idx.label3">📅 開始日</label>
+              <input type="date" id="history-date-from">
+            </div>
+            <div class="filter-group">
+              <label for="history-date-to" data-i18n="idx.label4">📅 終了日</label>
+              <input type="date" id="history-date-to">
+            </div>
+            <div class="filter-group filter-actions">
+              <button class="btn btn-secondary btn-sm" id="btn-clear-filters" data-i18n="idx.btn_clear_filters">フィルタクリア</button>
+            </div>
+          </div>
+        </div>
+        <div class="history-actions" id="history-actions" style="display:none;">
+          <label class="history-select-all">
+            <input type="checkbox" id="history-select-all"> <span data-i18n="idx.select_all">すべて選択</span>
+          </label>
+          <span class="history-selected-count" id="history-selected-count"></span>
+          <button class="btn btn-danger" id="btn-clear-history" data-i18n="idx.btn_clear_history">全履歴削除</button>
+          <button class="btn btn-secondary" id="btn-hide-selected" disabled data-i18n="idx.btn_hide_selected">履歴削除</button>
+          <button class="btn btn-danger" id="btn-delete-selected" disabled data-i18n="idx.btn_delete_selected">ファイル削除</button>
+        </div>
+        <div class="history-list" id="history-list"></div>
+        <div class="empty-state" id="history-empty" style="display:none;">
+          <span class="empty-icon">📭</span>
+          <p data-i18n="idx.p">まだ処理履歴がありません</p>
+        </div>
+      </div>
+
+      <!-- 設定ページ -->
+      <div class="page" id="page-settings">
+        <div class="page-header">
+          <h1 data-i18n="idx.h13">⚙️ 設定</h1>
+          <p class="page-description" data-i18n="idx.page_description2">アプリケーションの設定を変更できます</p>
+        </div>
+
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="prompt-settings" data-i18n="idx.prompt_settings">プロンプト設定</button>
+          <button class="tab-btn" data-tab="model-settings" data-i18n="idx.model_settings">モデル設定</button>
+          <button class="tab-btn" data-tab="appearance-settings" data-i18n="idx.appearance_settings">環境設定</button>
+          <button class="tab-btn" data-tab="about" data-i18n="about.tab">情報</button>
+        </div>
+
+        <!-- プロンプト設定タブ -->
+        <div class="tab-content active" id="tab-prompt-settings">
+          <div class="prompt-manager">
+            <div class="prompt-list-header">
+              <label data-i18n="idx.label5">保存済みプロンプト</label>
+              <div class="prompt-backup-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-backup-prompts" data-i18n="idx.btn_backup_prompts" data-i18n-title="idx.btn_backup_prompts_title" title="保存済みプロンプトをすべてダウンロードフォルダに保存します">💾 バックアップ</button>
+                <button class="btn btn-secondary btn-sm" id="btn-restore-prompts" data-i18n="idx.btn_restore_prompts" data-i18n-title="idx.btn_restore_prompts_title" title="バックアップしたファイルからプロンプトを取り込みます">📂 復元</button>
+              </div>
+            </div>
+            <div class="prompt-list" id="prompt-list"></div>
+          </div>
+          <div class="form-group">
+            <label for="prompt-name" data-i18n="idx.label6">プロンプト名</label>
+            <input type="text" id="prompt-name" placeholder="例: 議事録" data-i18n-placeholder="idx.prompt_name_placeholder">
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label" for="prompt-hidden">
+              <input type="checkbox" id="prompt-hidden"> <span data-i18n="idx.prompt_hidden">このプロンプトを使わない</span>
+            </label>
+            <small class="form-hint" data-i18n="idx.prompt_hidden_hint">チェックすると、処理メニューに表示しません</small>
+          </div>
+          <div class="form-group">
+            <label for="prompt-description" data-i18n="idx.label7">説明（メイン画面に表示）</label>
+            <input type="text" id="prompt-description" placeholder="例: 会議の内容を議事録にまとめます" data-i18n-placeholder="idx.prompt_description_placeholder">
+            <small class="form-hint" data-i18n="idx.form_hint">メイン画面のプロンプト選択カードに表示される説明文です</small>
+          </div>
+          <div class="form-group">
+            <label for="prompt-editor" data-i18n="idx.label8">プロンプト</label>
+            <textarea id="prompt-editor" rows="12" placeholder="プロンプトを入力..." data-i18n-placeholder="idx.prompt_editor_placeholder"></textarea>
+            <small class="form-hint" data-i18n="idx.form_hint2">LLMに依頼するプロンプトを編集できます</small>
+          </div>
+          <div class="form-group">
+            <label for="prompt-output-dir" data-i18n="idx.label9">出力先フォルダ</label>
+            <div class="input-with-button">
+              <input type="text" id="prompt-output-dir" placeholder="例: C:\Users\...\output（空=デフォルト）" data-i18n-placeholder="idx.prompt_output_dir_placeholder">
+              <button class="btn btn-secondary btn-sm" id="btn-select-output-dir" data-i18n="idx.btn_select_output_dir">📁 フォルダ選択</button>
+            </div>
+            <small class="form-hint" data-i18n="idx.form_hint3">マークダウンファイルの保存先を指定できます。空の場合はデフォルトのoutputフォルダに保存されます</small>
+          </div>
+          <div class="form-group">
+            <label data-i18n="idx.label10">出力結果にナマの文字認識結果を含める</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="include-transcript" value="false" checked> <span data-i18n="idx.transcript_no">含めない</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="include-transcript" value="true"> <span data-i18n="idx.transcript_yes">含める</span>
+              </label>
+            </div>
+            <small class="form-hint" data-i18n="idx.form_hint4">マークダウンファイルに音声認識の生テキストを含めます</small>
+          </div>
+          <div class="prompt-actions">
+            <button class="btn btn-primary" id="btn-new-prompt" data-i18n="idx.btn_new_prompt">＋ 新規作成</button>
+            <button class="btn btn-secondary" id="btn-copy-prompt" data-i18n="idx.btn_copy_prompt">📋 コピー</button>
+            <button class="btn btn-danger" id="btn-delete-prompt" data-i18n="idx.btn_delete_prompt">🗑️ 削除</button>
+          </div>
+        </div>
+
+        <!-- モデル設定タブ -->
+        <div class="tab-content" id="tab-model-settings">
+          <div class="form-group">
+            <p data-i18n-html="idx.vibe_note">音声認識は<a href="https://github.com/thewh1teagle/vibe/releases" target="_blank" rel="noopener">vibe</a>のvibe-server.exeを利用しています</p>
+          </div>
+          <div class="form-group" id="transcription-model-group">
+            <label for="transcription-model" data-i18n="idx.label11">文字起こしモデル</label>
+            <select id="transcription-model">
+              <option value="tiny" data-i18n="idx.option">tiny (最速・低精度)</option>
+              <option value="base" data-i18n="idx.option2">base (速い・低精度)</option>
+              <option value="small" data-i18n="idx.option3">small (バランス)</option>
+              <option value="medium" data-i18n="idx.option4">medium (高精度)</option>
+              <option value="large-v3" data-i18n="idx.option5">large-v3 (最高精度)</option>
+              <option value="large-v3-turbo" selected data-i18n="idx.option6">large-v3-turbo (速度と精度のバランス)</option>
+            </select>
+            <small class="form-hint" data-i18n="idx.form_hint5">選んだモデルがこの PC に無い場合は、保存するときにダウンロードするかどうかを確認します</small>
+          </div>
+          <div class="form-group">
+            <label for="vibe-server-path" data-i18n="idx.label12">vibe-server.exeのパス（任意・自動検出出来ない場合）</label>
+            <div class="input-with-button">
+              <input type="text" id="vibe-server-path" placeholder="例: C:\Users\...\vibe-server.exe（空=自動検出）" data-i18n-placeholder="idx.vibe_server_path_placeholder">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-select-vibe-server" data-i18n="idx.btn_select_vibe_server">選択</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="llm-model-path" data-i18n="idx.label13">AIモデルの指定</label>
+            <div class="input-with-button">
+              <input type="text" id="llm-model-path" value="gemma4:e2b-qat(llama.cpp)" spellcheck="false" autocomplete="off">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-select-llm-model" data-i18n="idx.btn_select_vibe_server">選択</button>
+            </div>
+            <small class="form-hint" data-i18n="idx.form_hint6">任意のモデルの指定が可能です</small>
+          </div>
+          <div class="form-group">
+            <label for="llm-device" data-i18n="idx.label_llm_device">LLM の実行装置</label>
+            <select id="llm-device">
+              <option value="auto" data-i18n="idx.llm_device_auto">自動（推奨）</option>
+              <option value="gpu" data-i18n="idx.llm_device_gpu">GPU</option>
+              <option value="cpu" data-i18n="idx.llm_device_cpu">CPU</option>
+            </select>
+            <small class="form-hint" data-i18n="idx.form_hint_llm_device">自動: GPU（AMD・Intel・NVIDIA。Vulkan 対応）が使えれば GPU、使えなければ CPU で動かします。GPU: GPU を優先します（使えないときは CPU）。CPU: 常に CPU で動かします。GPU でうまく動かないときは CPU を選んでください。保存すると、再起動なしで反映されます。</small>
+            <small class="form-hint" id="llm-device-status" aria-live="polite"></small>
+          </div>
+        </div>
+
+        <!-- 環境設定タブ（表示モード・ダウンロード形式。変更は即時に反映する） -->
+        <div class="tab-content" id="tab-appearance-settings">
+          <div class="form-group">
+            <label for="ui-language" data-i18n="idx.label_language">言語 / Language</label>
+            <select id="ui-language">
+              <option value="ja">日本語</option>
+              <option value="en">English</option>
+            </select>
+            <small class="form-hint" data-i18n="idx.form_hint_language">表示する言語を切り替えます。編集していない初期プロンプトと音声認識の言語も、選んだ言語に合わせて入れ替わります</small>
+          </div>
+          <div class="form-group" id="safe-render-group" style="display:none">
+            <label data-i18n="idx.safe_render_label">描画の安全モード</label>
+            <small class="form-hint" data-i18n="idx.safe_render_hint">画面が表示されなかったため、GPU を使わない描画に切り替えています。表示が少し重く感じられる場合があります。問題が起きなくなったときは、通常の描画に戻せます。</small>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-safe-render-reset" data-i18n="idx.safe_render_reset">通常の描画に戻す</button>
+          </div>
+          <div class="form-group">
+            <label data-i18n="idx.label14">表示モード</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" data-theme-value="light" data-i18n="idx.light">☀️ ライト</button>
+              <button class="toggle-btn" data-theme-value="dark" data-i18n="idx.dark">🌙 ダーク</button>
+            </div>
+            <small class="form-hint" data-i18n="idx.form_hint7">アプリの表示モードを切り替えます</small>
+          </div>
+          <div class="form-group">
+            <label data-i18n="idx.label15">ダウンロード形式（既定）</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="download_format" value="txt" checked> <span data-i18n="idx.format_txt_setting">テキスト (.txt)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="download_format" value="docx"> Word (.docx)
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="download_format" value="pdf"> PDF (.pdf)
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="download_format" value="md"> Markdown (.md)
+              </label>
+            </div>
+            <small class="form-hint" data-i18n="idx.form_hint8">処理履歴の詳細画面でダウンロードするときの初期の形式です（画面上で都度変更もできます）</small>
+          </div>
+        </div>
+
+        <!-- 情報タブ（保存する項目は無いため保存フッターは出さない） -->
+        <div class="tab-content" id="tab-about">
+          <table class="about-table">
+            <tr><th data-i18n="about.version">バージョン</th><td id="about-version"></td></tr>
+            <tr><th data-i18n="about.license">ライセンス</th><td>MIT License</td></tr>
+            <tr><th data-i18n="about.repository">GitHub</th><td><a href="https://github.com/fukueilab/Voice2Doc" data-external>https://github.com/fukueilab/Voice2Doc</a></td></tr>
+            <tr><th data-i18n="about.website">福栄ラボ</th><td><a href="https://www.8asue.com/fukuei/" data-external>https://www.8asue.com/fukuei/</a></td></tr>
+            <tr><th data-i18n="about.youtube">YouTube</th><td><a href="https://www.youtube.com/@fukueilab" data-external>https://www.youtube.com/@fukueilab</a></td></tr>
+          </table>
+          <h3 class="about-prereq-title" data-i18n="about.prereq_title">必要なソフトウェア（同梱していません）</h3>
+          <ol class="about-prereq">
+            <li><b>Vibe</b> — <a href="https://github.com/thewh1teagle/vibe/releases" data-external>https://github.com/thewh1teagle/vibe/releases</a><br>
+              <small class="form-hint" data-i18n="about.prereq_vibe">文字起こしサーバー（vibe-server.exe）と ffmpeg.exe を提供します。Whisper モデルとローカル LLM は、初回の使用時にアプリがダウンロードします。</small></li>
+          </ol>
+          <p class="form-hint about-gpu" data-i18n="about.gpu">AI のモデル（Gemma 4 E2B、約 2.6GB）は初回の使用時にダウンロードします。GPU（AMD・Intel・NVIDIA。Vulkan 対応）があれば自動で GPU を使い、無い・合わない場合は CPU で動きます。グラフィックスドライバーは最新にしておいてください。</p>
+          <p class="form-hint about-notice" data-i18n="about.notice">このアプリは MIT ライセンスのオープンソースソフトウェアです。Vibe（vibe-server.exe・ffmpeg.exe）・Whisper モデル・ローカル LLM のモデルは同梱していません。それぞれの配布元のライセンス・利用規約に従ってください。</p>
+        </div>
+
+        <!-- 共通の保存フッター（表示中のタブに対して動作する） -->
+        <div class="footer-bar" id="settings-footer">
+          <span class="footer-note" id="settings-footer-note"></span>
+          <button type="button" class="btn btn-secondary" id="btn-footer-reset" data-i18n="idx.btn_footer_reset">このタブを既定値に戻す</button>
+          <button type="button" class="btn btn-primary" id="btn-footer-save" data-i18n="idx.btn_footer_save">保存</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 履歴詳細モーダル (全ページ外。開始画面の一覧からも開くため .page の中に置かない) -->
+    <div class="modal-overlay" id="history-modal" style="display:none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title"></h2>
+          <div class="modal-header-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-copy-report" data-i18n="idx.btn_copy_prompt">📋 コピー</button>
+            <div class="radio-group download-format-group" role="radiogroup" aria-label="ダウンロード形式" data-i18n-aria-label="idx.radio_group_aria_label">
+              <label class="radio-label"><input type="radio" name="dl-format" value="txt" checked> <span data-i18n="idx.format_txt">テキスト</span></label>
+              <label class="radio-label"><input type="radio" name="dl-format" value="docx"> Word</label>
+              <label class="radio-label"><input type="radio" name="dl-format" value="pdf"> PDF</label>
+              <label class="radio-label"><input type="radio" name="dl-format" value="md"> Markdown</label>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-download-report" data-i18n="idx.btn_download_report">💾 ダウンロード</button>
+            <button class="modal-close" id="modal-close">✕</button>
+          </div>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- 汎用の確認ダイアログ「はい / キャンセル」 (全ページ外) -->
+    <div class="modal-overlay" id="confirm-modal" style="display:none;">
+      <div class="modal-content modal-confirm" role="dialog" aria-labelledby="confirm-title">
+        <div class="modal-header">
+          <h2 id="confirm-title" data-i18n="idx.confirm_title">確認</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message" id="confirm-message"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-confirm-cancel" data-i18n="idx.btn_confirm_cancel">キャンセル</button>
+          <button class="btn btn-primary" id="btn-confirm-ok" data-i18n="idx.btn_confirm_ok">はい</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 設定の未保存確認モーダル (全ページ外) -->
+    <div class="modal-overlay" id="settings-leave-modal" style="display:none;">
+      <div class="modal-content modal-confirm">
+        <div class="modal-header">
+          <h2 data-i18n="idx.h23">未保存の変更があります</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message" data-i18n="idx.confirm_message">保存していない設定の変更があります。破棄して移動しますか？</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-leave-cancel" data-i18n="idx.btn_leave_cancel">設定に戻る</button>
+          <button class="btn btn-primary" id="btn-leave-discard" data-i18n="idx.btn_leave_discard">破棄して移動</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- vibe-server.exeフォールバック警告モーダル (全ページ外) -->
+    <div class="modal-overlay" id="vibe-fallback-modal" style="display:none;">
+      <div class="modal-content modal-confirm">
+        <div class="modal-header">
+          <h2 data-i18n="idx.h24">⚠️ 警告</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message vibe-fallback-message" data-i18n="idx.confirm_message2">vibeを導入してください。現在はvibe-server.exe無しに仮に稼働しています。</p>
+        </div>
+        <div class="modal-footer">
+          <span class="vibe-recheck-status" id="vibe-recheck-status" role="status"></span>
+          <button class="btn btn-secondary" id="btn-vibe-recheck" data-i18n="idx.btn_vibe_recheck">再確認</button>
+          <button class="btn btn-primary" id="btn-vibe-fallback-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 設定リセット確認モーダル -->
+    <!-- 復元: アプリのウィンドウが無いとき用のファイル選択（設定タブの外に置き、未保存検知の対象にしない） -->
+    <input type="file" id="restore-prompts-file" accept=".json,application/json" style="display:none;">
+
+    <div class="modal-overlay" id="restore-prompts-modal" style="display:none;">
+      <div class="modal-content modal-confirm" role="dialog" aria-labelledby="restore-prompts-title">
+        <div class="modal-header">
+          <h2 id="restore-prompts-title" data-i18n="idx.restore_prompts_title">プロンプトの復元</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message" id="restore-prompts-message"></p>
+          <p class="confirm-detail" id="restore-prompts-detail"></p>
+          <ul class="restore-mode-help">
+            <li data-i18n-html="idx.restore_merge_help"><strong>追加＋同名は上書き</strong>: バックアップのプロンプトを取り込みます。同じ名前のものは置き換え、それ以外の今のプロンプトは残します。</li>
+            <li data-i18n-html="idx.restore_replace_help"><strong>全て置き換え</strong>: 今の保存済みプロンプトを消して、バックアップの内容にします（初期プロンプトは削除できないため残ります）。</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-restore-cancel" data-i18n="idx.btn_confirm_cancel">キャンセル</button>
+          <button class="btn btn-primary" id="btn-restore-merge" data-i18n="idx.btn_restore_merge">追加＋同名は上書き</button>
+          <button class="btn btn-danger" id="btn-restore-replace" data-i18n="idx.btn_restore_replace">全て置き換え</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="vibe-model-download-modal" style="display:none;">
+      <div class="modal-content modal-confirm">
+        <div class="modal-header">
+          <h2 data-i18n="idx.vibe_dl_title">🎙 音声認識モデルのダウンロード</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message" data-i18n="idx.vibe_dl_message">音声認識モデルをダウンロードします。ダウンロードに時間が必要です。</p>
+          <p class="confirm-detail" id="vibe-model-download-detail"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-vibe-dl-cancel" data-i18n="idx.btn_confirm_cancel">キャンセル</button>
+          <button class="btn btn-primary" id="btn-vibe-dl-download" data-i18n="idx.vibe_dl_download">ダウンロード</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="reset-confirm-modal" style="display:none;">
+      <div class="modal-content modal-confirm">
+        <div class="modal-header">
+          <h2 data-i18n="idx.h24">⚠️ 警告</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message" data-i18n="idx.confirm_message3">警告！設定を初期値に戻します。</p>
+          <p class="confirm-detail" id="reset-confirm-detail"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-reset-cancel" data-i18n="idx.btn_confirm_cancel">キャンセル</button>
+          <button class="btn btn-danger" id="btn-reset-confirm">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 処理中ナビゲーション確認モーダル -->
+    <div class="modal-overlay" id="processing-nav-confirm-modal" style="display:none;">
+      <div class="modal-content modal-confirm">
+        <div class="modal-header">
+          <h2 data-i18n="idx.h25">⏳ 処理中</h2>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-message" data-i18n="idx.confirm_message4">処理を実行中です。移動すると処理が中止されます。</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-processing-nav-continue" data-i18n="idx.btn_processing_nav_continue">処理続行</button>
+          <button class="btn btn-danger" id="btn-processing-nav-abort" data-i18n="idx.btn_processing_nav_abort">中止して移動</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

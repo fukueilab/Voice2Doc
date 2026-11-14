@@ -1,0 +1,7 @@
+target-version = "py312"
+line-length = 120
+
+[lint]
+# 既存コードに大量の指摘が出るルール(bandit/simplify/perf等)は有効化しない。
+# まずは基本的なpyflakes/pycodestyleエラーとimport順序のみを対象にする。
+select = ["E", "F", "W", "I"]

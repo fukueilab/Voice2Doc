@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability / セキュリティ上の問題
+    url: https://github.com/fukueilab/Voice2Doc/security/advisories/new
+    about: Please report security issues privately. / 非公開でご報告ください。
+  - name: Fukuei Lab / 福栄ラボ
+    url: https://www.8asue.com/fukuei/
+    about: Other inquiries / その他のお問い合わせ

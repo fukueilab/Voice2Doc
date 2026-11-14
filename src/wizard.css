@@ -1,0 +1,668 @@
+/* Voice2Doc 初回起動ウィザード スタイル */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* メイン画面(style.css)と同じライト配色・紫アクセント */
+  --bg-primary: #f6f7f9;
+  --bg-secondary: #ffffff;
+  --bg-card: #f1f3f6;
+  --bg-input: #ffffff;
+  --primary: #6c4cf1;
+  --primary-hover: #5a3ad6;
+  --primary-light: #ece8fd;
+  --text-primary: #1f2328;
+  --text-secondary: #667085;
+  --text-light: #8a93a3;
+  --border: #d0d7de;
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --danger: #c62828;
+}
+
+body {
+  font-family: "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* メインコンテナ */
+.wizard-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ヘッダー */
+.wizard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.wizard-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wizard-logo-icon {
+  font-size: 24px;
+}
+
+.wizard-logo-text {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.wizard-step-indicator {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s, transform 0.3s;
+}
+
+.step-dot.active {
+  background: var(--primary);
+  transform: scale(1.2);
+}
+
+.step-dot.completed {
+  background: var(--success);
+}
+
+/* コンテンツ */
+.wizard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 48px;
+  overflow-y: auto;
+}
+
+/* ページ（各ステップ） */
+.wizard-page {
+  display: none;
+  width: 100%;
+  max-width: 900px;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.wizard-page.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ウェルカムページ */
+.wizard-welcome-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.wizard-welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.wizard-welcome-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+/* チェックリスト */
+.check-list {
+  width: 100%;
+  margin: 16px 0;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+
+.check-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.check-text {
+  flex: 1;
+}
+
+.check-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.check-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* 選択カード */
+.selection-grid {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.selection-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.selection-card:hover {
+  border-color: var(--primary);
+  background: var(--bg-card);
+}
+
+.selection-card.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.selection-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+}
+
+.selection-card.selected .selection-radio {
+  border-color: var(--primary);
+}
+
+.selection-card.selected .selection-radio::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.selection-info {
+  flex: 1;
+}
+
+.selection-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.selection-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.selection-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 入力フィールド */
+.input-group {
+  width: 100%;
+  margin: 12px 0;
+}
+
+.input-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+}
+
+.input-field::placeholder {
+  color: var(--text-light);
+}
+
+/* セクションタイトル */
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* フッター */
+.wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}
+
+.btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s, opacity 0.2s;
+  min-width: 120px;
+  text-align: center;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-card);
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #276a2b;
+}
+
+.wizard-footer-left {
+  display: flex;
+  gap: 10px;
+}
+
+.wizard-footer-right {
+  display: flex;
+  gap: 10px;
+}
+
+/* 完了ページ */
+.wizard-complete-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.wizard-complete-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.wizard-complete-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* プログレスバー */
+.progress-container {
+  width: 100%;
+  margin: 16px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* Vibe が見つからないときの案内（前提条件チェックのページ） */
+.vibe-guide {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary-light);
+  font-size: 13px;
+  line-height: 1.6;
+  width: 100%;
+}
+
+.vibe-guide-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.vibe-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 6px;
+}
+
+.vibe-guide-actions .btn {
+  text-decoration: none;
+}
+
+.vibe-guide-url {
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.vibe-guide-status {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.vibe-guide-status.error {
+  color: var(--danger);
+}
+
+.vibe-guide-searched {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.vibe-guide-searched ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+
+/* 最初に必要なもの（ウェルカムページ） */
+.first-need {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary-light);
+  font-size: 13px;
+  line-height: 1.6;
+  width: 100%;
+}
+
+.first-need-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.first-need p {
+  margin: 0 0 4px;
+}
+
+.first-need-hint {
+  font-weight: 700;
+}
+
+/* 前提条件ページ下部: 「次へ」が押せない理由と、確認せずに進むリンク */
+.prereq-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.prereq-hint {
+  color: var(--text-secondary);
+}
+
+.skip-check-link {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+#btn-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* エラーメッセージ */
+.error-message {
+  display: none;
+  padding: 10px 14px;
+  background: #fdecea;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.error-message.visible {
+  display: block;
+}
+
+/* 設定サマリー */
+.summary-table {
+  width: 100%;
+  margin: 16px 0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+}
+
+.summary-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.summary-value {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* リンク */
+.link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 900px) {
+  .wizard-content {
+    padding: 24px 32px;
+  }
+  
+  .wizard-page {
+    max-width: 100%;
+  }
+  
+  .selection-card {
+    padding: 14px;
+  }
+  
+  .check-item {
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .wizard-content {
+    padding: 16px 20px;
+  }
+  
+  .wizard-welcome-title {
+    font-size: 22px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+  
+  .btn {
+    padding: 8px 16px;
+    min-width: 100px;
+  }
+}
+
+/* 言語の選択（ウェルカムページの右上） */
+.wizard-language {
+  text-align: right;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.wizard-language select {
+  margin-left: 6px;
+  padding: 4px 8px;
+}
+
+/* モデルのダウンロード確認ダイアログ */
+.wiz-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.wiz-modal {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 24px;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.wiz-modal h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.wiz-modal-message {
+  margin: 0 0 8px;
+}
+
+.wiz-modal-detail {
+  margin: 0 0 16px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+.wiz-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+

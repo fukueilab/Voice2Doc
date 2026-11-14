@@ -1,0 +1,54 @@
+name: Bug report / 不具合の報告
+description: Something does not work as expected / 期待どおりに動かない
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Voice2Doc is a personal project, so replies may take a while and some reports may not get one. / 個人開発のため、お返事に時間がかかったり、お答えできなかったりします。
+        Please remove personal information (names, paths, transcripts) before posting.
+        ご報告ありがとうございます。個人情報（名前・パス・文字起こし内容）は伏せてください。
+  - type: input
+    id: version
+    attributes:
+      label: App version / アプリのバージョン
+      description: Shown at the top right of the window and in Settings → About / 画面右上のヘッダーと「設定 → 情報」に表示されています
+      placeholder: "1.0.0-beta.3"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 23H2"
+    validations:
+      required: true
+  - type: input
+    id: backends
+    attributes:
+      label: Backends / 使用しているエンジン
+      description: Transcription engine (vibe-server.exe from Vibe, which is required / openai-whisper as a fallback), Vibe version and AI model (Settings → Model) / 文字起こしエンジン（Vibe の vibe-server.exe は必須。openai-whisper は代替）・Vibe のバージョン・設定 → モデル設定
+      placeholder: "Whisper: vibe-server.exe, LLM: local"
+  - type: input
+    id: filetype
+    attributes:
+      label: Input type / 入力の種類
+      placeholder: "e.g. .m4a audio, pasted text, .mp4 video"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 再現手順
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual / 期待した動作と実際の動作
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors shown in the app / 画面に表示されたエラー
+      description: Optionally attach the latest activity log (logs\YYYY-MM-DDTHH-MM-SS.log next to config.json) / 可能なら動作ログ（config.json と同じ場所の logs フォルダ内の最新の .log）を添付
+      render: text

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>話書き - 初回設定ウィザード</title>
+  <!-- 起動の保険: スクリプトの読み込み失敗・起動中のエラーで画面が白いままにならないよう、案内と再読み込みボタンを出す。
+       文言は i18n.js が読み込めない場合にも出せるよう、ここに日英を直接持つ -->
+  <script>
+  (function () {
+    // アプリで選んだ表示言語（i18n.js が保存）を優先し、無ければ OS（ブラウザー）の言語で決める
+    var saved = null;
+    try { saved = localStorage.getItem('voice2doc.ui_language'); } catch (e) { /* 読めなければ OS の言語 */ }
+    var ja = saved ? saved === 'ja' : (navigator.language || '').toLowerCase().indexOf('ja') === 0;
+    var msg = ja ? ['画面を表示できませんでした', '読み込み中にエラーが起きました。再読み込みしても直らないときは、アプリを一度終了してから起動し直してください。', '再読み込み']
+                 : ['The window could not be displayed', 'An error occurred while loading. If reloading does not help, close the app and start it again.', 'Reload'];
+    function show(detail) {
+      if (window.__v2dBooted || document.getElementById('early-error-panel')) return;
+      var box = document.createElement('div');
+      box.id = 'early-error-panel';
+      box.setAttribute('data-early-error', '1');
+      box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#fff;color:#222;font-family:Segoe UI,Meiryo,sans-serif;text-align:center;padding:24px';
+      var inner = document.createElement('div');
+      inner.style.cssText = 'max-width:520px';
+      var h = document.createElement('h1'); h.style.cssText = 'font-size:20px;margin:0 0 12px'; h.textContent = msg[0];
+      var p = document.createElement('p'); p.style.cssText = 'line-height:1.6;font-size:14px'; p.textContent = msg[1];
+      var d = document.createElement('p'); d.style.cssText = 'font-size:12px;opacity:.7;word-break:break-all'; d.textContent = String(detail || '').slice(0, 300);
+      var b = document.createElement('button'); b.style.cssText = 'margin-top:14px;padding:8px 22px;font-size:14px;border:0;border-radius:6px;background:#6c4cf1;color:#fff;cursor:pointer'; b.textContent = msg[2];
+      b.onclick = function () { location.reload(); };
+      inner.appendChild(h); inner.appendChild(p); inner.appendChild(d); inner.appendChild(b);
+      box.appendChild(inner);
+      (document.body || document.documentElement).appendChild(box);
+    }
+    window.addEventListener('error', function (e) {
+      // スクリプト・CSS の読み込み失敗は e.target が要素になる（バブリングしないのでキャプチャで拾う）
+      var t = e.target;
+      if (t && t !== window && t.tagName) {
+        // 読み込み失敗はスクリプトとCSSだけを対象にする（画像などの軽微な失敗で画面を覆わない）
+        if (t.tagName === 'SCRIPT' || t.tagName === 'LINK') show('load failed: ' + (t.src || t.href));
+        return;
+      }
+      show(e.message || 'error');
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) {
+      show(e.reason && e.reason.message ? e.reason.message : e.reason);
+    });
+  })();
+  </script>
+  <link rel="stylesheet" href="wizard.css">
+</head>
+<body>
+  <div class="wizard-container">
+    <!-- ヘッダー -->
+    <div class="wizard-header">
+      <div class="wizard-logo">
+        <span class="wizard-logo-icon">🎤</span>
+        <span class="wizard-logo-text" data-i18n="wiz.wizard_logo_text">話書き セットアップ</span>
+      </div>
+      <div class="wizard-step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+    </div>
+
+    <!-- コンテンツ -->
+    <div class="wizard-content">
+
+      <!-- ページ1: ウェルカム -->
+      <div class="wizard-page active" id="page-1">
+        <div class="wizard-welcome-icon">🎙️</div>
+        <div class="wizard-language">
+          <label for="wizard-language" data-i18n="wiz.label_language">言語 / Language</label>
+          <select id="wizard-language">
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <h1 class="wizard-welcome-title" data-i18n="wiz.wizard_welcome_title">話書きへようこそ</h1>
+        <p class="wizard-welcome-subtitle" data-i18n-html="wiz.welcome_subtitle">
+          音声や動画を AI で文字起こし・要約するアプリです。<br>
+          初回起動ガイドに沿って、約1分で設定を完了しましょう。
+        </p>
+        <div class="first-need" id="first-need">
+          <div class="first-need-title" data-i18n="wiz.first_need_title">最初に必要なもの: Vibe（最優先）</div>
+          <p data-i18n="wiz.first_need_body">音声認識には、無料のアプリ「Vibe」が必要です。</p>
+          <p class="first-need-hint" data-i18n="wiz.first_next_hint">まず右下の「次へ」を押してください。</p>
+        </div>
+        <div class="check-list">
+          <div class="check-item">
+            <span class="check-icon">📝</span>
+            <div class="check-text">
+              <div class="check-label" data-i18n="wiz.check_label">音声文字起こし</div>
+              <div class="check-detail" data-i18n="wiz.check_detail">Whisper / vibe-server.exe で高精度な音声認識</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">🤖</span>
+            <div class="check-text">
+              <div class="check-label" data-i18n="wiz.check_label2">AI要約・整理</div>
+              <div class="check-detail" data-i18n="wiz.check_detail2">ローカル LLM で自動整理</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">📁</span>
+            <div class="check-text">
+              <div class="check-label" data-i18n="wiz.check_label3">マルチファイル対応</div>
+              <div class="check-detail" data-i18n="wiz.check_detail3">音声・動画・テキストファイルを一括処理</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ページ2: 前提条件チェック -->
+      <div class="wizard-page" id="page-2">
+        <h2 class="section-title" data-i18n="wiz.section_title">前提条件チェック</h2>
+        <p class="section-desc" data-i18n="wiz.section_desc">正常に動作するために必要なコンポーネントを確認します</p>
+        <div class="check-list" id="prereq-list">
+          <div class="check-item">
+            <span class="check-icon" id="check-vc">⏳</span>
+            <div class="check-text">
+              <div class="check-label">Visual C++ Runtime</div>
+              <div class="check-detail" data-i18n="wiz.check_detail4">音声認識エンジンに必要です</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon" id="check-webview">⏳</span>
+            <div class="check-text">
+              <div class="check-label">WebView2 Runtime</div>
+              <div class="check-detail" data-i18n="wiz.check_detail5">アプリの表示に必要です</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon" id="check-ffmpeg">⏳</span>
+            <div class="check-text">
+              <div class="check-label">FFmpeg</div>
+              <div class="check-detail" data-i18n="wiz.check_detail6">動画ファイルの音声抽出に必要です</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="check-icon" id="check-vibe">⏳</span>
+            <div class="check-text">
+              <div class="check-label">vibe-server.exe</div>
+              <div class="check-detail" data-i18n="wiz.check_detail7">高速音声認識エンジンです</div>
+            </div>
+          </div>
+        </div>
+        <!-- Vibe（vibe-server.exe・ffmpeg.exe）が見つからないときだけ表示する案内 -->
+        <div class="vibe-guide" id="vibe-guide" style="display:none;">
+          <div class="vibe-guide-title" data-i18n="wiz.vibe_missing_title">Vibe が見つかりません</div>
+          <p data-i18n="wiz.vibe_missing">音声認識には Vibe が必要です（同梱していません）。</p>
+          <div class="vibe-guide-actions">
+            <a href="https://github.com/thewh1teagle/vibe/releases" class="btn btn-primary" id="vibe-guide-link" data-external data-i18n="wiz.vibe_open">Vibe のダウンロードページを開く</a>
+            <button type="button" class="btn btn-secondary" id="btn-vibe-recheck" data-i18n="wiz.vibe_recheck">再確認</button>
+            <button type="button" class="btn btn-secondary" id="btn-vibe-pick" data-i18n="wiz.vibe_pick">vibe-server.exe の場所を指定する</button>
+          </div>
+          <small class="vibe-guide-url">https://github.com/thewh1teagle/vibe/releases</small>
+          <details class="vibe-guide-searched" id="vibe-guide-searched" style="display:none;">
+            <summary data-i18n="wiz.vibe_searched">探した場所:</summary>
+            <ul id="vibe-guide-searched-list"></ul>
+          </details>
+        </div>
+        <div class="vibe-guide-status" id="vibe-guide-status" role="status" style="display:none;"></div>
+        <div class="prereq-footer">
+          <small class="prereq-hint" id="next-blocked-hint" data-i18n="wiz.next_blocked_hint">4つの項目がすべて「準備完了」になると「次へ」を押せます。</small>
+          <a href="#" class="skip-check-link" id="btn-skip-check" data-i18n="wiz.skip_check">確認せずに進む</a>
+        </div>
+        <div class="error-message" id="prereq-error"></div>
+      </div>
+
+      <!-- ページ3: Whisperモデル選択 -->
+      <div class="wizard-page" id="page-3">
+        <h2 class="section-title" data-i18n="wiz.section_title2">文字起こしモデルの選択</h2>
+        <p class="section-desc" data-i18n="wiz.section_desc2">音声認識はvibe-server.exe（高速・軽量）を使用します。モデルを選択してください</p>
+
+        <div style="margin-top: 20px; width: 100%;">
+          <h3 class="section-title" style="font-size: 16px; margin-bottom: 12px;" data-i18n="wiz.section_title3">Whisper モデル</h3>
+          <div class="selection-grid">
+            <div class="selection-card whisper-model-option" data-value="tiny">
+              <div class="selection-radio"></div>
+              <div class="selection-info">
+                <div class="selection-title">tiny</div>
+                <div class="selection-desc" data-i18n="wiz.selection_desc">最も高速。精度は低めです。</div>
+              </div>
+            </div>
+            <div class="selection-card whisper-model-option" data-value="base">
+              <div class="selection-radio"></div>
+              <div class="selection-info">
+                <div class="selection-title">base</div>
+                <div class="selection-desc" data-i18n="wiz.selection_desc2">バランス型。一般的な用途に十分です。</div>
+              </div>
+            </div>
+            <div class="selection-card whisper-model-option" data-value="small">
+              <div class="selection-radio"></div>
+              <div class="selection-info">
+                <div class="selection-title">small</div>
+                <div class="selection-desc" data-i18n="wiz.selection_desc3">精度と速度のバランスが良いです。</div>
+              </div>
+            </div>
+            <div class="selection-card selected whisper-model-option" data-value="large-v3-turbo">
+              <div class="selection-radio"></div>
+              <div class="selection-info">
+                <div class="selection-title" data-i18n="wiz.selection_title">turbo (推奨)</div>
+                <div class="selection-desc" data-i18n="wiz.selection_desc4">最新の高速モデル。精度と速度の両立。</div>
+              </div>
+              <div class="selection-badge" data-i18n="wiz.selection_badge">おすすめ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未導入のモデルを選んだときのダウンロード確認（ページ3から進むとき） -->
+      <div class="wiz-modal-overlay" id="model-download-modal" style="display:none;">
+        <div class="wiz-modal">
+          <h3 data-i18n="idx.vibe_dl_title">🎙 音声認識モデルのダウンロード</h3>
+          <p class="wiz-modal-message" data-i18n="idx.vibe_dl_message">音声認識モデルをダウンロードします。ダウンロードに時間が必要です。</p>
+          <p class="wiz-modal-detail" id="model-download-detail"></p>
+          <div class="wiz-modal-buttons">
+            <button type="button" class="btn btn-secondary" id="btn-model-dl-cancel" data-i18n="idx.btn_confirm_cancel">キャンセル</button>
+            <button type="button" class="btn btn-primary" id="btn-model-dl-download" data-i18n="idx.vibe_dl_download">ダウンロード</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ページ4: AI（ローカルLLM）について -->
+      <div class="wizard-page" id="page-4">
+        <h2 class="section-title" data-i18n="wiz.section_title4">AI（文章生成）について</h2>
+        <p class="section-desc" data-i18n="wiz.section_desc3">テキスト要約・整理にはローカルLLMを使用します</p>
+
+        <div class="check-list">
+          <div class="check-item">
+            <span class="check-icon">🤖</span>
+            <div class="check-text">
+              <div class="check-label" data-i18n="wiz.check_label4">ローカル LLM (gemma4:e2b-qat)</div>
+              <div class="check-detail" data-i18n="wiz.check_detail8">PC上で動作。インターネット不要。初回にモデルをダウンロードします。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ページ5: 完了 -->
+      <div class="wizard-page" id="page-5">
+        <div class="wizard-complete-icon">✅</div>
+        <h2 class="wizard-complete-title" data-i18n="wiz.wizard_complete_title">設定完了</h2>
+        <p class="wizard-complete-desc" data-i18n-html="wiz.complete_desc">
+          以下の設定で Voice2Doc を使用します。<br>
+          後から「設定」画面でいつでも変更できます。
+        </p>
+        <div class="summary-table" id="summary-content"></div>
+      </div>
+
+    </div>
+
+    <!-- フッター -->
+    <div class="wizard-footer">
+      <div class="wizard-footer-left">
+        <button class="btn btn-secondary" id="btn-prev" style="display: none;" data-i18n="wiz.btn_prev">← 前へ</button>
+      </div>
+      <div class="wizard-footer-right">
+        <button class="btn btn-secondary" id="btn-skip" data-i18n="wiz.btn_skip">スキップ</button>
+        <button class="btn btn-primary" id="btn-next" data-i18n="wiz.btn_next">次へ →</button>
+        <button class="btn btn-success" id="btn-start" style="display: none;" data-i18n="wiz.btn_start">Voice2Doc を始める</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="wizard.js"></script>
+</body>
+</html>

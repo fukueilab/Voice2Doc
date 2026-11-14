@@ -1,0 +1,25 @@
+name: Feature request / 機能の要望
+description: Suggest an idea / アイデアの提案
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Voice2Doc is a personal project, so replies may take a while and some requests may not get one. / 個人開発のため、お返事に時間がかかったり、お答えできなかったりします。
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 困っていること
+      description: What are you trying to do? / 何をしたいですか？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution / 提案
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered / 検討した代替案

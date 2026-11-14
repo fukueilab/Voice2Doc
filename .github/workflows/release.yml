@@ -1,0 +1,70 @@
+name: Release
+
+# v1.2.3 のようなタグを push すると、Windows ランナーで PyInstaller と NSIS のインストーラーをビルドし、
+# GitHub Releases の下書き（draft）に添付する。"-" を含むタグ（v1.0.0-beta.1 など）はプレリリースにする。
+# 下書きは内容を確認してから手動で公開する（docs/RELEASING.md）。
+# 手動実行（workflow_dispatch）ではビルドだけ行い、インストーラーを成果物（artifact）として残す
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Check the tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $line = Select-String -Path src_backends\config.py -Pattern '^APP_VERSION = "(.+)"' | Select-Object -First 1
+          $version = $line.Matches[0].Groups[1].Value
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} does not match APP_VERSION $version" }
+      - name: Install dependencies
+        # Vulkan build of llama-cpp-python (prebuilt wheel; the extra index is set in requirements.txt)
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Test
+        run: python -m pytest src_backends/ -q
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis --no-progress -y }
+      - name: Fetch CPU libraries of llama.cpp
+        # Bundled as a fallback for PCs without a Vulkan loader (the loader itself is not redistributed)
+        run: python scripts/fetch_cpu_llama_lib.py
+      - name: Build with PyInstaller
+        run: pyinstaller voice2doc.spec --clean --noconfirm
+      - name: Build installer with NSIS
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" installer\voice2doc_installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
+          (Get-FileHash dist\Voice2Doc-Setup.exe -Algorithm SHA256).Hash | Out-File -Encoding ascii dist\Voice2Doc-Setup.exe.sha256
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: installer
+          path: |
+            dist/Voice2Doc-Setup.exe
+            dist/Voice2Doc-Setup.exe.sha256
+      - name: Create draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          name: Voice2Doc ${{ github.ref_name }}
+          files: |
+            dist/Voice2Doc-Setup.exe
+            dist/Voice2Doc-Setup.exe.sha256
+          generate_release_notes: true

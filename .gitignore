@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.spec.bak
+
+# Logs / local runtime state
+*.log
+server.log
+
+# Large downloaded models / caches (auto-downloaded at first run — never commit)
+*.bin
+*.gguf
+*.pt
+
+# User audio/video/text input, generated output, and app data
+# (matches the runtime data dirs under ~/Documents/Voice2Doc and %LOCALAPPDATA%/Voice2Doc)
+/input/
+/output/
+/done/
+config.json
+default.json
+history.json
+
+# Loose audio/video files accidentally dropped at the repo root during manual testing
+# (scope to root only — intentional test fixtures under tests/ or src_backends/ are not ignored)
+/*.wav
+/*.WAV
+/*.mp3
+/*.mp4
+/*.m4a
+/*.mov
+/*.mkv
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Playwright / MCP debug artifacts
+.playwright-mcp/
+
+# Env secrets
+.env
+
+
+# Claude Code: local worktrees, personal settings and working notes
+.claude/worktrees/
+.claude/settings.local.json
+/issue.md

@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        # Vulkan build of llama-cpp-python (prebuilt wheel; the extra index is set in requirements.txt)
+        run: pip install -r requirements.txt
+      - name: Lint (no new ruff findings)
+        run: python scripts/ruff_baseline.py
+      - name: Test
+        run: python -m pytest src_backends/ -v
