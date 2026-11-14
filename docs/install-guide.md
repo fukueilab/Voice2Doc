@@ -2,7 +2,7 @@
 
 English version: [install-guide.en.md](install-guide.en.md)
 対象バージョン: 1.0.0-beta.3
-配布物: `Voice2Doc-Setup.exe`（NSISインストーラー、約300MB）
+配布物: `Voice2Doc-Setup.exe`（NSISインストーラー、約300MB。[Releases ページ](https://github.com/fukueilab/Voice2Doc/releases) の最新版の **Assets** にあります）
 
 ## 1. 動作環境
 
@@ -59,7 +59,7 @@ English version: [install-guide.en.md](install-guide.en.md)
 
 | 症状 | 対処 |
 |---|---|
-| 「Windows によって PC が保護されました」と表示される（SmartScreen） | インストーラーはコード署名されていないため表示される。このリポジトリの Releases から入手したものなら「詳細情報」→「実行」で進める |
+| 「Windows によって PC が保護されました」と表示される（SmartScreen） | インストーラーはコード署名されていないため表示される。このリポジトリの [Releases](https://github.com/fukueilab/Voice2Doc/releases) から入手したものなら「詳細情報」→「実行」で進める |
 | 「スマート アプリ コントロールがブロックしました」と表示され、管理者として実行しても起動しない | Windows 11 のスマート アプリ コントロールが、署名のないアプリを止めている（許可する方法は無い）。導入するには「設定」→「プライバシーとセキュリティ」→「Windows セキュリティ」→「アプリとブラウザーの制御」→「スマート アプリ コントロールの設定」で**オフ**にしてから、もう一度インストーラーを実行する。**注意: 多くの Windows のバージョンでは、一度オフにすると Windows のリセット（再インストール）をしない限りオンに戻せない。** |
 | インストール完了画面で「一部のコンポーネントでエラーが発生しました」と表示される | Visual C++ RedistributableまたはWebView2 Runtimeの自動インストールに失敗している。以下から手動インストールする。<br>・VC++ Redistributable: https://aka.ms/vs/17/release/vc_redist.x64.exe <br>・WebView2 Runtime: https://developer.microsoft.com/en-us/microsoft-edge/webview2/ |
 | アプリ起動後、画面が真っ白/表示されない | 約10秒で白い画面を検知し、自動で再読み込み→GPUを使わない描画（安全モード）での再起動を試す（直ったときは設定の「環境設定」に解除ボタンが出る）。それでも駄目なら案内が出る。WebView2 Runtimeが正しく導入されていない可能性もあるので、上記WebView2を手動インストール後、PCを再起動して再度起動する。報告時は `logs` フォルダのログを添える |

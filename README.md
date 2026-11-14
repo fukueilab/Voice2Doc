@@ -90,7 +90,7 @@ Hugging Face on first use, and a different Whisper model only when you choose it
 
 1. Install [Vibe](https://github.com/thewh1teagle/vibe/releases) if you have not yet (download `vibe_3.3.2_x64-setup.exe`
    from **Assets** and run it; close its window with the × after it finishes downloading the model).
-2. Download `Voice2Doc-Setup.exe` from the repository's **Releases** page (about 300 MB).
+2. Download `Voice2Doc-Setup.exe` from the [**Releases** page](https://github.com/fukueilab/Voice2Doc/releases) (open the newest version and look under **Assets**; about 300 MB).
 3. Run it and follow the wizard. It installs to `%LOCALAPPDATA%\Voice2Doc` and needs no administrator rights.
    The last page says that Voice2Doc uses Vibe for speech recognition and that, if Vibe is not installed yet, you install
    it when the app first starts. **Launch Voice2Doc** is checked, so press **Finish** to start the app.
@@ -99,7 +99,7 @@ Hugging Face on first use, and a different Whisper model only when you choose it
    without restarting the app. Wait for the model downloads to finish before transcribing.
 
 > **Windows SmartScreen**: the installer is not code-signed, so Windows may show "Windows protected your PC".
-> Click **More info → Run anyway** if you downloaded it from this repository's Releases page.
+> Click **More info → Run anyway** if you downloaded it from this repository's [Releases page](https://github.com/fukueilab/Voice2Doc/releases).
 >
 > **Smart App Control (Windows 11)**: when it is on, it blocks unsigned apps with no way to allow them — not even with
 > administrator rights. To install Voice2Doc you have to turn it off in *Settings → Privacy & security → Windows Security →

@@ -1,7 +1,7 @@
 # Voice2Doc Installation Guide
 
 Applies to version: 1.0.0-beta.3 · Japanese version: [install-guide.md](install-guide.md)
-Distributed as: `Voice2Doc-Setup.exe` (NSIS installer, about 300 MB)
+Distributed as: `Voice2Doc-Setup.exe` (NSIS installer, about 300 MB; under **Assets** of the newest version on the [Releases page](https://github.com/fukueilab/Voice2Doc/releases))
 
 ## 1. Requirements
 
@@ -76,7 +76,7 @@ If an old icon is still shown, Windows' icon cache is stale: restart Explorer, r
 
 | Symptom | What to do |
 |---|---|
-| "Windows protected your PC" (SmartScreen) | The installer is not code-signed. If you downloaded it from this repository's Releases page, click **More info → Run anyway** |
+| "Windows protected your PC" (SmartScreen) | The installer is not code-signed. If you downloaded it from this repository's [Releases page](https://github.com/fukueilab/Voice2Doc/releases), click **More info → Run anyway** |
 | "Smart App Control blocked an app", even when run as administrator | Smart App Control (Windows 11) blocks unsigned apps and offers no way to allow one. To install, turn it **off** in *Settings → Privacy & security → Windows Security → App & browser control → Smart App Control settings*, then run the installer again. **Note: on most Windows versions it cannot be turned back on without resetting or reinstalling Windows.** |
 | "Some components failed" at the end of the installation | The automatic installation of the Visual C++ Redistributable or the WebView2 Runtime failed. Install them manually:<br>• VC++ Redistributable: https://aka.ms/vs/17/release/vc_redist.x64.exe<br>• WebView2 Runtime: https://developer.microsoft.com/en-us/microsoft-edge/webview2/ |
 | The window stays blank | The app notices a blank window after about 10 s, reloads it and then restarts once with GPU acceleration turned off ("safe rendering mode"; Settings > Preferences shows a button to go back). If that fails too, a message explains what to try. The WebView2 Runtime may also be missing: install it manually, restart the PC and start the app again. When reporting, attach the log from the `logs` folder |
