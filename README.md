@@ -88,6 +88,14 @@ Hugging Face on first use, and a different Whisper model only when you choose it
 
 ## Installation
 
+A setup video (about 5 minutes) walks through every step below, from downloading in Microsoft Edge to the app's main screen.
+The English version shows the Japanese screens; the captions give each button's English name next to the Japanese one.
+
+| English | 日本語 (Japanese) |
+|:---:|:---:|
+| [![Voice2Doc setup guide video (English)](https://img.youtube.com/vi/skiT6SxcPdM/hqdefault.jpg)](https://youtu.be/skiT6SxcPdM) | [![Voice2Doc setup guide video (Japanese)](https://img.youtube.com/vi/HNJr572inao/hqdefault.jpg)](https://youtu.be/HNJr572inao) |
+| [Watch on YouTube](https://youtu.be/skiT6SxcPdM) | [YouTube で見る](https://youtu.be/HNJr572inao) |
+
 1. Install [Vibe](https://github.com/thewh1teagle/vibe/releases) if you have not yet (download `vibe_3.3.2_x64-setup.exe`
    from **Assets** and run it; close its window with the × after it finishes downloading the model).
 2. Download `Voice2Doc-Setup.exe` from the [**Releases** page](https://github.com/fukueilab/Voice2Doc/releases) (open the newest version and look under **Assets**; about 300 MB).

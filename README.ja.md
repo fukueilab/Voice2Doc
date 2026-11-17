@@ -81,6 +81,13 @@ Hugging Face からダウンロードし、別の Whisper モデルは、設定�
 
 ## インストール
 
+下の手順を、Microsoft Edge でのダウンロードからアプリのメイン画面が出るまで、約5分の動画で説明しています。
+
+| 日本語 | English（英語） |
+|:---:|:---:|
+| [![話書き(Voice2Doc)導入設定手順の動画（日本語）](https://img.youtube.com/vi/HNJr572inao/hqdefault.jpg)](https://youtu.be/HNJr572inao) | [![Voice2Doc の導入設定手順の動画（英語）](https://img.youtube.com/vi/skiT6SxcPdM/hqdefault.jpg)](https://youtu.be/skiT6SxcPdM) |
+| [YouTube で見る](https://youtu.be/HNJr572inao) | [Watch on YouTube](https://youtu.be/skiT6SxcPdM) |
+
 1. まだであれば [Vibe](https://github.com/thewh1teagle/vibe/releases) をインストールします（**Assets** の `vibe_3.3.2_x64-setup.exe` を実行。モデルのダウンロードが終わったら Vibe の画面は × で閉じて構いません）。
 2. リポジトリの [**Releases** ページ](https://github.com/fukueilab/Voice2Doc/releases) の最新版を開き、**Assets** から `Voice2Doc-Setup.exe`（約300MB）をダウンロードします。
 3. 実行してウィザードに従います。インストール先は `%LOCALAPPDATA%\Voice2Doc` で、管理者権限は不要です。
