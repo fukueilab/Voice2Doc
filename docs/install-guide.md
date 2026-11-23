@@ -1,7 +1,7 @@
 # Voice2Doc インストール手順書
 
 English version: [install-guide.en.md](install-guide.en.md)
-対象バージョン: 1.0.0-beta.4
+対象バージョン: 1.0.0-beta.5
 配布物: `Voice2Doc-Setup.exe`（NSISインストーラー、約300MB。[Releases ページ](https://github.com/fukueilab/Voice2Doc/releases) の最新版の **Assets** にあります）
 
 ## 1. 動作環境

@@ -166,6 +166,11 @@ a = Analysis(
         'scipy',
         # 'PIL' は除外しない: fpdf2(PDF出力)がPillowをimportするため
         'cv2',
+        # 開発・テスト専用。torch・numba の任意の import をたどって同梱されるのを防ぐ（実行時には使わない）
+        'pytest',
+        '_pytest',
+        'coverage',
+        'pygments',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

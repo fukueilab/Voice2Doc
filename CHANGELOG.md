@@ -7,6 +7,17 @@ Pre-releases (`-beta.N`, `-rc.N`) are test builds before the stable version. See
 
 ## [Unreleased]
 
+## [1.0.0-beta.5] - 2026-11-23
+
+### Security
+- Updated pinned dependencies that had known vulnerabilities: `python-multipart` 0.0.20 → 0.0.32 (crafted requests to the
+  local upload endpoint could make the app unresponsive) and `fpdf2` 2.8.7 → 2.8.8 (the affected image, SVG and HTML
+  features are not used). Test tools only: `pypdf` 6.21.2 → 6.21.4, `pytest` 8.3.5 → 9.0.3 and `pytest-asyncio`
+  0.25.3 → 1.3.0 (0.25.3 does not support `pytest` 9). PDF output and uploads work as before.
+
+### Changed
+- Test tools (`pytest`, `coverage`) and `Pygments` are no longer bundled in the installer; the app never used them.
+
 ## [1.0.0-beta.4] - 2026-11-23
 
 ### Fixed
@@ -69,6 +80,7 @@ First public pre-release, for testing before the stable 1.0.0 release.
 - The installer is not code-signed, so Windows SmartScreen may warn, and Windows 11 Smart App Control blocks it when
   turned on (see the installation guide).
 
-[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.4...HEAD
+[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.5...HEAD
+[1.0.0-beta.5]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.4...v1.0.0-beta.5
 [1.0.0-beta.4]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.3...v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/fukueilab/Voice2Doc/releases/tag/v1.0.0-beta.3
