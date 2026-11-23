@@ -681,6 +681,41 @@ button.list-row:hover {
   margin: 2px 0;
 }
 
+/* 表（横に長い表は枠の中で横スクロールする）。罫線は --border だとダークで背景に埋もれるため --text-light にする */
+.markdown-body .md-table {
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--text-light);
+  padding: 4px 8px;
+  min-width: 3em;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.markdown-body th {
+  background: var(--bg-tertiary);
+  font-weight: 700;
+}
+
+.markdown-body .md-center {
+  text-align: center;
+}
+
+.markdown-body .md-right {
+  text-align: right;
+}
+
 /* 設定画面 */
 .settings-tabs {
   display: flex;

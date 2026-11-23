@@ -141,8 +141,9 @@ def test_contributing_note_about_response_time_and_merging(name):
     assert not re.search(r"are welcome|歓迎", text), "貢献を歓迎する文言は書かない（中立の文言にする）"
 
 
-def test_changelog_has_only_the_first_public_release():
-    """CHANGELOG は初回公開版の説明だけを載せる（公開前の版の履歴は載せない）"""
+def test_changelog_starts_from_the_first_public_release():
+    """CHANGELOG は現在の版が先頭で、初回公開版が最も古い（公開前の版の履歴は載せない）"""
     from src_backends.config import APP_VERSION
     headings = re.findall(r"^## \[([^\]]+)\]", _text("CHANGELOG.md"), re.M)
-    assert headings == ["Unreleased", APP_VERSION]
+    assert headings[:2] == ["Unreleased", APP_VERSION]
+    assert headings[-1] == "1.0.0-beta.3"

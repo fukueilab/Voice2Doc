@@ -7,6 +7,16 @@ Pre-releases (`-beta.N`, `-rc.N`) are test builds before the stable version. See
 
 ## [Unreleased]
 
+## [1.0.0-beta.4] - 2026-11-23
+
+### Fixed
+- Markdown tables are now real tables in the Word and PDF downloads and in the on-screen preview (history and results).
+  They used to be plain text lines joined with `|`. All cells have a border, the header row is bold on a light gray
+  background and is repeated after a page break, and column alignment (`:--`, `:-:`, `--:`), `\|` and `<br>` are supported.
+  Tables without leading and trailing `|` and separators with a single dash are recognized as well. `.txt` still writes each
+  row on one line joined with ` | `; separator lines and escapes that used to remain in the text are no longer written,
+  and empty cells are kept.
+
 ## [1.0.0-beta.3] - 2026-11-13
 
 First public pre-release, for testing before the stable 1.0.0 release.
@@ -59,5 +69,6 @@ First public pre-release, for testing before the stable 1.0.0 release.
 - The installer is not code-signed, so Windows SmartScreen may warn, and Windows 11 Smart App Control blocks it when
   turned on (see the installation guide).
 
-[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.3...HEAD
+[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.4...HEAD
+[1.0.0-beta.4]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.3...v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/fukueilab/Voice2Doc/releases/tag/v1.0.0-beta.3

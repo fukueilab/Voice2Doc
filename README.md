@@ -5,7 +5,7 @@
 **Turn voice and video recordings — or pasted text — into proofread text, proposals, reports and meeting notes, on your own Windows PC.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.0.0--beta.3-orange)
+![Version](https://img.shields.io/badge/version-1.0.0--beta.4-orange)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue)
 
 English | [日本語](README.ja.md)
@@ -27,7 +27,7 @@ A short video (about 2 minutes) shows what Voice2Doc does and how to use it. Cli
 | [![Voice2Doc introduction video (English)](https://img.youtube.com/vi/kJETnFES1AQ/hqdefault.jpg)](https://youtu.be/kJETnFES1AQ) | [![Voice2Doc introduction video (Japanese)](https://img.youtube.com/vi/CuGJ9sUqLIM/hqdefault.jpg)](https://youtu.be/CuGJ9sUqLIM) |
 | [Watch on YouTube](https://youtu.be/kJETnFES1AQ) | [YouTube で見る](https://youtu.be/CuGJ9sUqLIM) |
 
-> **Pre-release.** The current version is `1.0.0-beta.3`, a test build before the stable 1.0.0. Features are in place,
+> **Pre-release.** The current version is `1.0.0-beta.4`, a test build before the stable 1.0.0. Features are in place,
 > but expect rough edges.
 >
 > **The interface is available in English and Japanese.** The first-run wizard picks the language from your Windows language;
@@ -51,8 +51,8 @@ A short video (about 2 minutes) shows what Voice2Doc does and how to use it. Cli
   see [Privacy](#privacy). It uses your **GPU** (AMD, Intel or NVIDIA, through Vulkan) automatically when one is available and falls
   back to the CPU otherwise; keep the graphics driver up to date. You can pin it to the CPU or the GPU under Settings > Model > *LLM device*
 - **History**: full-text search, preview, copy, delete
-- **Download in the format you need**: `.txt` (UTF-8 BOM, CRLF — opens cleanly in Notepad), `.docx` (headings, bullets, bold),
-  `.pdf` (Japanese font embedded, no Word required) or `.md`. The default format is set in Settings → Preferences
+- **Download in the format you need**: `.txt` (UTF-8 BOM, CRLF — opens cleanly in Notepad), `.docx` (headings, bullets, bold, tables),
+  `.pdf` (tables too; Japanese font embedded, no Word required) or `.md`. The default format is set in Settings → Preferences
 - **First-run wizard** that checks prerequisites (VC++ Runtime, WebView2, FFmpeg, vibe-server.exe)
 - Installs per user — **no administrator rights** needed
 
