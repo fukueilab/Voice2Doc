@@ -588,24 +588,35 @@ app = FastAPI(
     title="Voice2Doc Sidecar",
     version=APP_VERSION,
     lifespan=lifespan,
+    # 自動生成の API 文書は使わない（外部(CDN)のスクリプトを、アプリと同じオリジンで読み込むため）
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 def configure_cors(port: int) -> None:
-    """CORSの許可元を、実際に使うポートの 127.0.0.1 / localhost だけにする（サーバー起動前に呼ぶ）。
+    """CORSの許可元と、受け付ける要求の宛先・送信元（local_guard）を、実際に使うポートの
+    127.0.0.1 / localhost だけにする（サーバー起動前に呼ぶ）。
 
     8008が他のソフトに使われていて別のポートへ移った場合にも、画面からのAPI呼び出しが拒否されないようにする。
     """
     from starlette.middleware import Middleware
 
+    from .local_guard import LocalGuard
+
+    origins = startup.build_origins(port)
+    guard = Middleware(LocalGuard, origins=origins)
     cors = Middleware(
         CORSMiddleware,
-        allow_origins=startup.build_origins(port),
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
     # add_middleware は起動後に呼べないため、一覧を直接差し替えて、次の要求でミドルウェアを組み直させる
-    app.user_middleware = [cors] + [m for m in app.user_middleware if m.cls is not CORSMiddleware]
+    # （一覧の先頭が一番外側。LocalGuard は CORS の応答より先に断る）
+    others = [m for m in app.user_middleware if m.cls not in (LocalGuard, CORSMiddleware)]
+    app.user_middleware = [guard, cors] + others
     app.middleware_stack = None
 
 
@@ -2593,8 +2604,11 @@ async def wizard_save(request: WizardSaveRequest):
 @app.api_route("/{full_path:path}", methods=["GET"])
 async def serve_frontend(full_path: str):
     """静的なファイルを配信し、見つからない場合は index.html を返す"""
+    # UNC パス（\\server\share）は開くだけで外部へ接続しうるため、ファイルシステムに触れる前に断る
+    if full_path.startswith("/") or any(c in full_path for c in "\\:\0") or ".." in full_path.split("/"):
+        raise HTTPException(status_code=403, detail="Forbidden")
     file_path = (STATIC_DIR / full_path).resolve()
-    if not str(file_path).startswith(str(STATIC_DIR.resolve())):
+    if not file_path.is_relative_to(STATIC_DIR.resolve()):
         raise HTTPException(status_code=403, detail="Forbidden")
     if file_path.exists() and file_path.is_file():
         return FileResponse(file_path)

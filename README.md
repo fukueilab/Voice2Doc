@@ -5,7 +5,7 @@
 **Turn voice and video recordings — or pasted text — into proofread text, proposals, reports and meeting notes, on your own Windows PC.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.0.0--beta.5-orange)
+![Version](https://img.shields.io/badge/version-1.0.0--beta.6-orange)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue)
 
 English | [日本語](README.ja.md)
@@ -27,7 +27,7 @@ A short video (about 2 minutes) shows what Voice2Doc does and how to use it. Cli
 | [![Voice2Doc introduction video (English)](https://img.youtube.com/vi/kJETnFES1AQ/hqdefault.jpg)](https://youtu.be/kJETnFES1AQ) | [![Voice2Doc introduction video (Japanese)](https://img.youtube.com/vi/CuGJ9sUqLIM/hqdefault.jpg)](https://youtu.be/CuGJ9sUqLIM) |
 | [Watch on YouTube](https://youtu.be/kJETnFES1AQ) | [YouTube で見る](https://youtu.be/CuGJ9sUqLIM) |
 
-> **Pre-release.** The current version is `1.0.0-beta.5`, a test build before the stable 1.0.0. Features are in place,
+> **Pre-release.** The current version is `1.0.0-beta.6`, a test build before the stable 1.0.0. Features are in place,
 > but expect rough edges.
 >
 > **The interface is available in English and Japanese.** The first-run wizard picks the language from your Windows language;

@@ -122,6 +122,8 @@ datas = [
 # python-docx の既定テンプレート(default.docx 等)をWord出力のために同梱
 from PyInstaller.utils.hooks import collect_data_files
 datas += collect_data_files('docx')
+# openai-whisper（予備の文字起こし）が実行時に読むデータ（メルフィルター・語彙）を同梱
+datas += collect_data_files('whisper')
 
 # バイナリファイル
 import importlib.util

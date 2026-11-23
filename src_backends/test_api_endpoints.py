@@ -949,7 +949,7 @@ class TestStartupLifespan:
             mock_vibe.is_vibe_running.return_value = False
             mock_vibe.get_vibe_port.return_value = None
 
-            with TestClient(app, raise_server_exceptions=False) as client:
+            with TestClient(app, base_url="http://127.0.0.1:8008", raise_server_exceptions=False) as client:
                 # LLMモデル準備タスクがgateで止まっている間はstartup_completeはFalse
                 data = client.get("/health").json()
                 assert data["startup_complete"] is False
@@ -981,7 +981,7 @@ class TestStartupLifespan:
             mock_vibe.is_vibe_running.return_value = False
             mock_vibe.get_vibe_port.return_value = None
 
-            with TestClient(app, raise_server_exceptions=False) as client:
+            with TestClient(app, base_url="http://127.0.0.1:8008", raise_server_exceptions=False) as client:
                 data = {}
                 for _ in range(50):
                     data = client.get("/health").json()
@@ -1016,7 +1016,7 @@ class TestStartupLifespan:
             mock_vibe.ensure_model.return_value = None
             mock_vibe.start_vibe.side_effect = hanging_start_vibe
 
-            with TestClient(main_mod.app, raise_server_exceptions=False) as client:
+            with TestClient(main_mod.app, base_url="http://127.0.0.1:8008", raise_server_exceptions=False) as client:
                 data = {}
                 for _ in range(50):
                     data = client.get("/health").json()
@@ -1141,7 +1141,7 @@ class TestExecutorPoolSplit:
             mock_llm.ensure_model_downloaded.return_value = None
             mock_get_model.return_value = object()
 
-            with TestClient(main_mod.app, raise_server_exceptions=False) as client:
+            with TestClient(main_mod.app, base_url="http://127.0.0.1:8008", raise_server_exceptions=False) as client:
                 data = {}
                 for _ in range(50):
                     data = client.get("/health").json()

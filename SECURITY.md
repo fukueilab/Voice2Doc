@@ -14,7 +14,7 @@ We aim to acknowledge reports within 7 days. Please include the version, steps t
 
 ## Scope notes
 
-- Voice2Doc runs a local web server bound to `127.0.0.1` only (port 8008, or the next free port up to 8030 if that one is taken) that is used only by its own window.
+- Voice2Doc runs a local web server bound to `127.0.0.1` only (port 8008, or the next free port up to 8030 if that one is taken) that is used only by its own window. Requests sent by other web pages (other than plain page navigation) or with another host name are rejected.
 - Audio, video, transcripts and generated text are processed entirely on your PC and are never sent to an external service
   (see the Privacy section of the [README](README.md)). The app goes online only to download the Whisper and LLM model files
   from Hugging Face (or, for the `openai-whisper` fallback, from OpenAI's download server).
