@@ -87,7 +87,7 @@ _BOLD_ITALIC_RE = re.compile(r"\*\*\*(.+?)\*\*\*")
 _ESCAPES = {"\\*": "", "\\_": ""}
 _UNESCAPES = {"": "*", "": "_"}
 # XML 1.0で使えない制御文字（docx生成が失敗するため解析の入口で除去する）
-_XML_INVALID_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_XML_INVALID_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
 
 
 def _link_to_text(m: "re.Match") -> str:
@@ -827,7 +827,7 @@ def blocks_to_pdf(blocks: List[Block]) -> bytes:
     pdf.add_page()
     base_margin = pdf.l_margin
 
-    def write_runs(runs: List[Run], size: float, line_mm: float, bold_all: bool, bold_kind: str) -> None:
+    def write_runs(runs: List[Run], size: float, line_mm: float, bold_all: bool, bold_kind: str, pdf=pdf) -> None:
         pdf.set_font(PDF_FONT_FAMILY, size=size)
         for r in runs:
             text = _sanitize_pdf_text(r.text, cmap)
@@ -851,27 +851,63 @@ def blocks_to_pdf(blocks: List[Block]) -> bytes:
         return layouts[id(table)]
 
     def heading_line(heading: Heading) -> float:
+        """見出しの1行の高さ"""
         return _PDF_HEADING_PT.get(heading.level, _PDF_HEADING_PT[3]) * 0.5
+
+    page_height = pdf.page_break_trigger - pdf.t_margin
+    probe = None  # 折り返す見出しの高さを測るための、出力しない PDF
+    heights = {}
+
+    def heading_height(heading: Heading) -> float:
+        """見出しの高さ（折り返した行数分）。半ページを超える見出しは、途中で改ページしてよいので1行分とする"""
+        nonlocal probe
+        line = heading_line(heading)
+        if id(heading) in heights:
+            return heights[id(heading)]
+        size = _PDF_HEADING_PT.get(heading.level, _PDF_HEADING_PT[3])
+        pdf.set_font(PDF_FONT_FAMILY, size=size)
+        width = sum(pdf.get_string_width(_sanitize_pdf_text(r.text, cmap)) for r in heading.runs)
+        height = line
+        # 余裕のある1行の見出し（ほとんどの場合）は測らない
+        if width > pdf.epw - 4 * pdf.c_margin:
+            if probe is None:
+                probe = FPDF(orientation="P", unit="mm", format="A4")
+                probe.set_margins(20, 20, 20)
+                probe.set_auto_page_break(False)
+                probe.add_font(PDF_FONT_FAMILY, "", str(font_path))
+                probe.add_page()
+            probe.set_xy(probe.l_margin, probe.t_margin)
+            write_runs(heading.runs, size, line, True, "heading", probe)
+            height = probe.get_y() - probe.t_margin + line
+            if height > page_height / 2:
+                height = line
+        heights[id(heading)] = height
+        return height
+
+    def heading_minimum(heading: Heading) -> float:
+        """見出しと本文2行分の高さ"""
+        return heading_height(heading) + _PDF_LINE_MM * 2
 
     def after_heading(index: int) -> bool:
         """直前（空行を除く）が見出しか"""
         previous = next((b for b in reversed(blocks[max(0, index - 2):index]) if not isinstance(b, Blank)), None)
         return isinstance(previous, Heading)
 
-    def heading_space(index: int) -> float:
+    def heading_space(index: int) -> Tuple[float, bool]:
         """見出しと、その直後の本文2行分（表が続くときは表の見出し行と最初の行）に必要な高さ。
 
-        見出しが続くときは最後の見出しの後まで含める。合わせて1ページに入らないときは最初の見出しの分だけにする。"""
-        minimum = heading_line(blocks[index]) + _PDF_LINE_MM * 2
-        page = pdf.page_break_trigger - pdf.t_margin
-        total = heading_line(blocks[index])
+        見出しが続くときは最後の見出しの後まで含める。合わせて1ページに入らないときは最初の見出しの分だけにする。
+        戻り値は（高さ, 続く見出しの分まで含めたか）。"""
+        minimum = (heading_minimum(blocks[index]), False)
+        page = page_height
+        total = heading_height(blocks[index])
         blank = 0.0
         for b in blocks[index + 1:]:
             if isinstance(b, Blank):
                 blank = _PDF_LINE_MM / 2
                 continue
             if isinstance(b, Heading):
-                total += 1 + blank + 3 + heading_line(b)
+                total += 1 + blank + 3 + heading_height(b)
                 blank = 0.0
                 if total > page:
                     return minimum
@@ -879,9 +915,17 @@ def blocks_to_pdf(blocks: List[Block]) -> bytes:
             if isinstance(b, Table):
                 total += 1 + blank
                 total += table_layout(b).lead_height(page - total)
-                return total if total <= page else minimum
+                return (total, True) if total <= page else minimum
             break
-        return min(total + _PDF_LINE_MM * 2, page)
+        total += _PDF_LINE_MM * 2
+        return (total, True) if total <= page else minimum
+
+    def last_heading(index: int) -> bool:
+        """次（空行を除く）が見出しではないか"""
+        following = next((b for b in blocks[index + 1:index + 3] if not isinstance(b, Blank)), None)
+        return not isinstance(following, Heading)
+
+    chain_reserved = False  # 続く見出しの分まで、最初の見出しのところで確保したか
 
     for index, b in enumerate(blocks):
         if isinstance(b, Heading):
@@ -890,11 +934,21 @@ def blocks_to_pdf(blocks: List[Block]) -> bytes:
             if pdf.get_y() > pdf.t_margin:
                 pdf.ln(3)
             # 見出しだけがページ末尾に残らないよう、直後の本文1〜2行分の余白がなければ改ページ
-            # （続く見出しの分は、最初の見出しのところでまとめて確保している）
-            needed = line + _PDF_LINE_MM * 2 if after_heading(index) else heading_space(index)
+            # （続く見出しの分は、1ページに入るなら最初の見出しのところでまとめて確保する）
+            if after_heading(index) and chain_reserved:
+                needed = heading_minimum(b)
+            else:
+                needed, chain_reserved = heading_space(index)
+                # 1ページを超える見出しの連続の途中では、ページを大きく空けてまで残りをまとめない
+                if after_heading(index) and not last_heading(index) and needed > page_height / 3:
+                    needed, chain_reserved = heading_minimum(b), False
             if pdf.get_y() + needed > pdf.page_break_trigger and pdf.get_y() > pdf.t_margin:
                 pdf.add_page()
+            page, top = pdf.page, pdf.get_y()
             write_runs(b.runs, size, line, True, "heading")
+            # 確保した高さより大きい見出し（半ページを超えるもの）の後は、確保し直す
+            if pdf.page != page or pdf.get_y() - top + line > heading_height(b) + 0.01:
+                chain_reserved = False
             pdf.ln(line + 1)
         elif isinstance(b, ListItem):
             # 異常に深い入れ子で本文幅が無くなり描画に失敗しないよう、インデントの段数に上限を設ける

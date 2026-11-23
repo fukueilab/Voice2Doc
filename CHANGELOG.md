@@ -7,6 +7,20 @@ Pre-releases (`-beta.N`, `-rc.N`) are test builds before the stable version. See
 
 ## [Unreleased]
 
+## [1.0.0-beta.6] - 2026-11-23
+
+### Security
+- The local server now rejects requests that web pages opened in a browser send to it (other than plain page navigation).
+  Such pages could send requests to it (for example, add files) while the app was running.
+- The local server no longer serves files outside its own folder, rejects network paths, and no longer offers the generated
+  API documentation pages (they loaded scripts from a CDN).
+
+### Fixed
+- PDF: a heading that wraps onto several lines is no longer left alone at the bottom of a page.
+- Word: documents that contain characters not allowed in XML (such as U+FFFE) could not be downloaded; these characters are
+  now removed.
+- The `openai-whisper` fallback failed in the installed app because its data files were not bundled.
+
 ## [1.0.0-beta.5] - 2026-11-23
 
 ### Security
@@ -80,7 +94,8 @@ First public pre-release, for testing before the stable 1.0.0 release.
 - The installer is not code-signed, so Windows SmartScreen may warn, and Windows 11 Smart App Control blocks it when
   turned on (see the installation guide).
 
-[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.5...HEAD
+[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.6...HEAD
+[1.0.0-beta.6]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.5...v1.0.0-beta.6
 [1.0.0-beta.5]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.4...v1.0.0-beta.5
 [1.0.0-beta.4]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.3...v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/fukueilab/Voice2Doc/releases/tag/v1.0.0-beta.3

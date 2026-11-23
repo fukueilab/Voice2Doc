@@ -158,5 +158,5 @@ def test_client(isolate_config):
             "vibe": True, "disk_space": True, "gpu": {},
         }
 
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app, base_url="http://127.0.0.1:8008", raise_server_exceptions=False)
         yield client

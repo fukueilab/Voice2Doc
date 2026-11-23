@@ -2,6 +2,7 @@
 import io
 
 import pytest
+from docx import Document
 
 from .output_formats import (
     Blank,
@@ -694,6 +695,86 @@ class TestTablePdf:
             pages = self._pages("本文の行です。\n" * n + "# 親の題\n## 子の題\n直後の文")
             assert "直後の文" in next(p for p in pages if "親の題" in p), n
 
+    _LONG_HEADS = {
+        "2lines": "長い見出し" * 14 + "終わり",
+        "4lines": "長い見出し" * 28 + "終わり",
+        "english": "a long heading of words " * 12 + "終わり",
+        "mixed": "見出し **bold part** と words " * 8 + "終わり",
+    }
+
+    @pytest.mark.parametrize("level, head", [("#", "2lines"), ("###", "2lines")] + [("##", h) for h in _LONG_HEADS])
+    @pytest.mark.parametrize("after", ["| 見出列 | 説明列 |\n|---|---|\n| 直後 | 内容 |", "直後の文", "- 直後の項目"])
+    def test_wrapped_heading_stays_with_what_follows(self, level, head, after):
+        for n in range(24, 37):
+            pages = self._pages("- 本文の項目\n" * n + f"\n{level} {self._LONG_HEADS[head]}\n\n{after}")
+            page = next(p for p in pages if "終わり" in "".join(p.split()))
+            assert "直後" in page, n
+            assert "見出し" in page or "a long" in page, n
+
+    def test_wrapped_headings_in_a_row_stay_with_the_table(self):
+        long = "長い見出し" * 14
+        for n in range(22, 37):
+            heads = f"# 親{long}\n\n## 子{long}"
+            pages = self._pages("- 本文の項目\n" * n + f"\n{heads}\n\n| 見出列 | b |\n|---|---|\n| 最初 | 2 |")
+            page = next(p for p in pages if "親" in p)
+            assert "子" in page and "見出列" in page and "最初" in page, n
+
+    @pytest.mark.parametrize("length", [500, 800, 950, 1000, 1500])
+    def test_short_heading_stays_with_a_very_long_heading(self, length):
+        for n in range(25, 37):
+            pages = self._pages("本文\n" * n + "\n\n## 短い題\n\n## " + "長" * length + "\n\n後文")
+            assert "長" in next(p for p in pages if "短い題" in p), n
+
+    def test_last_of_many_headings_stays_with_the_table(self):
+        for n in range(0, 12):
+            heads = "\n\n".join(f"## 見出し{i}番" for i in range(30))
+            pages = self._pages("本文\n" * n + f"\n{heads}\n\n| 見出列 | b |\n|---|---|\n| 最初 | 2 |")
+            page = next(p for p in pages if "見出列" in p)
+            assert "見出し29番" in page and "最初" in page, n
+
+    @pytest.mark.parametrize("level", ["#", "##", "###"])
+    @pytest.mark.parametrize("after", ["", "\n\n後文", "\n\n| 見出列 | b |\n|---|---|\n| 最初 | 2 |"])
+    def test_headings_longer_than_a_page_fill_the_pages(self, level, after):
+        for n in range(16, 62, 3):
+            heads = "\n\n".join(f"{level} 見出し{i}番" for i in range(n))
+            counts = [p.count("番") for p in self._pages(heads + after)]
+            full = max(counts)
+            for c in counts[:-2]:
+                assert c >= full - 1, (n, counts)  # 途中のページに大きな空きを作らない
+            if len(counts) > 1:
+                assert counts[-2] >= full * 0.6, (n, counts)
+
+    def test_last_of_many_headings_stays_with_a_tall_first_row(self):
+        for lines in (10, 25, 40):
+            tall = "<br>".join(f"z{i}" for i in range(lines))
+            for n in range(0, 10):
+                heads = "\n\n".join(f"## 見出し{i}番" for i in range(30))
+                table = f"| 見出列 | b |\n|---|---|\n| 最初 | {tall} |"
+                pages = self._pages("本文\n" * n + f"\n{heads}\n\n{table}")
+                assert "見出し29番" in next(p for p in pages if "見出列" in p), (lines, n)
+
+    def test_heading_after_a_very_long_heading_stays_with_the_table(self):
+        for n in range(0, 37):
+            heads = "# 短い題\n\n## " + "長" * 600 + "\n\n## 最後の題"
+            pages = self._pages("本文\n" * n + f"\n{heads}\n\n| 見出列 | b |\n|---|---|\n| 最初 | 2 |")
+            assert "最後の題" in next(p for p in pages if "見出列" in p), n
+
+    def test_consecutive_headings_before_a_tall_first_row_are_not_separated(self):
+        for lines in (30, 36, 40, 44):
+            tall = "<br>".join(f"z{i}" for i in range(lines))
+            for n in (0, 10, 25, 33):
+                table = f"| 見出列 | b |\n|---|---|\n| 最初 | {tall} |"
+                pages = self._pages("本文\n" * n + f"\n# 親の題\n\n## 子の題\n\n{table}")
+                page = next(p for p in pages if "親の題" in p)
+                assert "子の題" in page and "z0" in page, (lines, n)
+
+    @pytest.mark.parametrize("after", ["", "\n\n直後の文", "\n\n| 見出列 | b |\n|---|---|\n| 最初 | 2 |"])
+    def test_heading_taller_than_a_page(self, after):
+        pages = self._pages("本文です。\n\n# " + "長" * 1500 + after)
+        assert "".join(pages).count("長") == 1500
+        assert "本文です。" in pages[0] and "長" in pages[0]  # 1ページに入らない見出しのために空きを作らない
+        assert all(p.strip() for p in pages)
+
     def test_many_headings_do_not_waste_pages(self):
         assert len(self._pages("\n".join(f"# 見出し{i}" for i in range(60)))) <= 5
 
@@ -748,3 +829,21 @@ class TestTablePdf:
         one = "| a%d | b |\n|---|---|\n| 1 | 2 |"
         text = self._flat("\n\n".join(one % i for i in range(30)))
         assert all(f"a{i}" in text for i in range(30))
+
+
+class TestCharactersNotAllowedInXml:
+    @pytest.mark.parametrize("ch", ["\ufffe", "\uffff", "\ud800", "\udbff", "\udc00", "\udfff", "\x0b"])
+    @pytest.mark.parametrize("template", ["前{}後", "# 前{}後", "- 前{}後", "**前{}後**",
+                                          "| 前{}後 | b |\n|---|---|\n| 1{} | 2 |"])
+    def test_removed_in_every_format(self, ch, template):
+        md = template.replace("{}", ch)
+        assert "前後" in markdown_to_txt(md).decode("utf-8")
+        docx = Document(io.BytesIO(markdown_to_docx(md)))
+        cells = "".join(c.text for t in docx.tables for c in t._cells)
+        assert "前後" in "".join(p.text for p in docx.paragraphs) + cells
+        assert markdown_to_pdf(md).startswith(b"%PDF")
+
+    @pytest.mark.parametrize("ch", ["😀", "𠮷", "\ufffd", "\uf8ff", "\U0010fffd"])
+    def test_valid_characters_are_kept(self, ch):
+        assert ch in markdown_to_txt(f"前{ch}後").decode("utf-8")
+        assert ch in Document(io.BytesIO(markdown_to_docx(f"前{ch}後"))).paragraphs[0].text

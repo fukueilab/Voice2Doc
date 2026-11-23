@@ -163,7 +163,7 @@ class TestCors:
         from src_backends.main import app, configure_cors
 
         configure_cors(8012)
-        with TestClient(app) as client:
+        with TestClient(app, base_url="http://127.0.0.1:8012") as client:
             assert self._allowed(client, "http://127.0.0.1:8012") == "http://127.0.0.1:8012"
             assert self._allowed(client, "http://localhost:8012") == "http://localhost:8012"
             assert self._allowed(client, "http://127.0.0.1:8008") is None
