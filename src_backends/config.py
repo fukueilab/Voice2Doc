@@ -17,7 +17,7 @@ logger = logging.getLogger("voice2doc.config")
 # /healthのapp_versionとして返しフロントエンドが表示する）。
 # インストーラー側(installer/voice2doc_installer.nsiのAPP_VERSION)は同じ文字列に揃えること
 # （test_version.pyが一致を検証する）。タグは v<APP_VERSION>
-APP_VERSION = "1.0.0-beta.4"
+APP_VERSION = "1.0.0-beta.5"
 
 # 履歴からダウンロードできる形式（先頭が既定値）
 DOWNLOAD_FORMATS = ("txt", "docx", "pdf", "md")
