@@ -13,7 +13,7 @@ body:
     attributes:
       label: App version / アプリのバージョン
       description: Shown at the top right of the window and in Settings → About / 画面右上のヘッダーと「設定 → 情報」に表示されています
-      placeholder: "1.0.0-beta.6"
+      placeholder: "1.0.0-beta.7"
     validations:
       required: true
   - type: input
