@@ -1,4 +1,8 @@
 """output_formats（Markdown→IR→各形式変換）のテスト"""
+import io
+
+import pytest
+
 from .output_formats import (
     Blank,
     Heading,
@@ -6,16 +10,25 @@ from .output_formats import (
     OutputFormatError,
     Paragraph,
     Run,
+    Table,
+    column_widths,
+    display_width,
     markdown_to_docx,
     markdown_to_pdf,
     markdown_to_txt,
     parse_inline,
     parse_markdown,
+    wrap_runs,
 )
 
 
 def _text(runs):
     return "".join(r.text for r in runs)
+
+
+def _grids(blocks):
+    """表ブロックだけを、文字列の二次元配列（1行目が見出し）にする"""
+    return [[[_text(c) for c in row] for row in b.grid()] for b in blocks if isinstance(b, Table)]
 
 
 class TestParseInline:
@@ -110,9 +123,9 @@ class TestParseMarkdown:
         blocks = parse_markdown("前\n---\n後")
         assert [type(b) for b in blocks] == [Paragraph, Blank, Paragraph]
 
-    def test_table_rows_joined(self):
+    def test_table_becomes_table_block(self):
         blocks = parse_markdown("| 項目 | 値 |\n|---|---|\n| a | 1 |")
-        assert [_text(b.runs) for b in blocks] == ["項目 | 値", "a | 1"]
+        assert _grids(blocks) == [[["項目", "値"], ["a", "1"]]]
 
     def test_heading_trailing_hashes_removed(self):
         assert _text(parse_markdown("## 見出し ##")[0].runs) == "見出し"
@@ -355,3 +368,383 @@ class TestReviewRegressions:
     def test_pdf_very_deep_list_does_not_crash(self):
         md = "\n".join("  " * i + "- item" for i in range(40))
         assert markdown_to_pdf(md).startswith(b"%PDF")
+
+
+class TestParseTable:
+    def _one(self, md):
+        blocks = parse_markdown(md)
+        assert [type(b) for b in blocks] == [Table]
+        return blocks[0]
+
+    @pytest.mark.parametrize("md", [
+        "| a | b |\n|---|---|\n| 1 | 2 |",
+        "a | b\n---|---\n1 | 2",
+        "| a | b\n|---|---\n| 1 | 2",
+        "a | b |\n---|---|\n1 | 2 |",
+        "| a | b |\n|-|-|\n| 1 | 2 |",
+        "|a|b|\n| - | :-: |\n|1|2|",
+        "| a | b |\r\n|---|---|\r\n| 1 | 2 |\r\n",
+        "  | a | b |\n  |---|---|\n  | 1 | 2 |",
+    ])
+    def test_notations_accepted(self, md):
+        assert _grids([self._one(md)]) == [[["a", "b"], ["1", "2"]]]
+
+    def test_alignments(self):
+        t = self._one("|a|b|c|d|\n|:-|:-:|-:|-|\n|1|2|3|4|")
+        assert t.aligns == ["left", "center", "right", "left"]
+
+    def test_escaped_pipe_is_text(self):
+        assert _grids([self._one("| a \\| b | c |\n|---|---|\n| 1 | x\\|y |")]) == [[["a | b", "c"], ["1", "x|y"]]]
+
+    def test_br_becomes_newline(self):
+        t = self._one("| a | b |\n|---|---|\n| 1<br>2<br/>3<BR />4 | **x<br>y** |")
+        assert _text(t.rows[0][0]) == "1\n2\n3\n4"
+        assert t.rows[0][1] == [Run("x\ny", bold=True)]
+
+    def test_bold_cell(self):
+        t = self._one("| a | b |\n|---|---|\n| **強** | 前**中**後 |")
+        assert t.rows[0][0] == [Run("強", bold=True)]
+        assert t.rows[0][1] == [Run("前"), Run("中", bold=True), Run("後")]
+
+    def test_column_count_is_the_maximum_and_extra_cells_are_kept(self):
+        t = self._one("| a | b |\n|---|:-:|\n| 1 |\n| 1 | 2 | 3 |")
+        assert t.ncols == 3 and len(t.aligns) == 3
+        assert _grids([t]) == [[["a", "b", ""], ["1", "", ""], ["1", "2", "3"]]]
+
+    def test_empty_cells_are_kept(self):
+        assert _grids([self._one("| | b |\n|---|---|\n| 1 | |\n||2|")]) == [[["", "b"], ["1", ""], ["", "2"]]]
+
+    def test_dash_cells_in_the_body_are_data(self):
+        assert _grids([self._one("| a | b |\n|---|---|\n| - | - |")]) == [[["a", "b"], ["-", "-"]]]
+
+    def test_repeated_separator_rows_in_the_body_are_dropped(self):
+        t = self._one("|a|b|\n|---|---|\n|1|2|\n|---|---|\n|--|--|\n|3|4|")
+        assert _grids([t]) == [[["a", "b"], ["1", "2"], ["3", "4"]]]
+
+    def test_single_column_and_header_only(self):
+        assert _grids([self._one("| a |\n|---|\n| 1 |")]) == [[["a"], ["1"]]]
+        assert _grids([self._one("| a | b |\n|---|---|")]) == [[["a", "b"]]]
+
+    def test_table_under_a_list_item(self):
+        blocks = parse_markdown("- 項目\n  | a | b |\n  |---|---|\n  | 1 | 2 |\n- 次")
+        assert [type(b) for b in blocks] == [ListItem, Table, ListItem]
+        assert blocks[2].depth == 0
+
+    def test_table_right_after_a_paragraph_and_before_text(self):
+        blocks = parse_markdown("前文\n| a | b |\n|---|---|\n| 1 | 2 |\n後文")
+        assert [type(b) for b in blocks] == [Paragraph, Table, Paragraph]
+
+    def test_two_tables(self):
+        md = "| a | b |\n|---|---|\n| 1 | 2 |\n\n| c | d |\n|---|---|\n| 3 | 4 |"
+        assert [type(b) for b in parse_markdown(md)] == [Table, Blank, Table]
+
+    @pytest.mark.parametrize("after", ["# 見出し", "- 項目 | x", "1. 番号 | x", "> 引用 | x", "```"])
+    def test_other_blocks_end_the_table(self, after):
+        blocks = parse_markdown(f"| a | b |\n|---|---|\n| 1 | 2 |\n{after}")
+        assert _grids(blocks) == [[["a", "b"], ["1", "2"]]]
+
+    def test_code_fence_is_not_a_table(self):
+        blocks = parse_markdown("```\n| a | b |\n|---|---|\n| 1 | 2 |\n```")
+        assert [_text(b.runs) for b in blocks] == ["| a | b |", "|---|---|", "| 1 | 2 |"]
+
+    def test_rows_without_a_separator_stay_paragraphs(self):
+        blocks = parse_markdown("| a | b |\n| 1 | 2 |")
+        assert [_text(b.runs) for b in blocks] == ["a | b", "1 | 2"]
+        assert isinstance(parse_markdown("売上 | 利益")[0], Paragraph)
+
+    @pytest.mark.parametrize("md", ["# a | b\n---|---", "- a | b\n---|---", "> a | b\n---|---", "a | b\n---"])
+    def test_not_started_from_other_blocks(self, md):
+        assert not _grids(parse_markdown(md))
+
+    def test_separator_line_cannot_be_the_header(self):
+        blocks = parse_markdown("|---|---|\n| a | b |\n|---|---|\n| 1 | 2 |")
+        assert _grids(blocks) == [[["a", "b"], ["1", "2"]]]
+
+
+class TestTableTxt:
+    def _txt(self, md):
+        return markdown_to_txt(md).decode("utf-8-sig")
+
+    def test_output_is_unchanged(self):
+        md = "前\n| 項目 | 値 |\n|---|---|\n| **a** | 1 |\n| b |\n| c | |\n\n後"
+        assert self._txt(md) == "前\r\n項目 | 値\r\na | 1\r\nb\r\nc | \r\n\r\n後\r\n"
+
+    def test_newline_in_a_cell_becomes_a_space(self):
+        assert self._txt("| a | b |\n|---|---|\n| 1<br>2 | 3 |") == "a | b\r\n1 2 | 3\r\n"
+
+
+class TestColumnWidths:
+    def test_display_width_counts_full_width_as_two(self):
+        assert display_width("abc") == 3 and display_width("あいう") == 6
+        assert display_width("ab\nあいう") == 6
+
+    def test_widths_sum_to_the_total_and_follow_the_text(self):
+        t = parse_markdown("| 項目 | 説明 |\n|---|---|\n| 甲 | とても長い説明の文章です |")[0]
+        w = column_widths(t, 170.0, 15.0)
+        assert sum(w) == pytest.approx(170.0) and w[0] < w[1] and min(w) >= 15.0
+
+    def test_one_very_long_cell_does_not_starve_other_columns(self):
+        t = parse_markdown("|a|b|c|\n|-|-|-|\n|1|%s|3|" % ("長" * 2000))[0]
+        w = column_widths(t, 170.0, 15.0)
+        assert sum(w) == pytest.approx(170.0) and min(w) >= 15.0
+
+    def test_short_cells_and_dates_keep_their_width(self):
+        t = parse_markdown("|番号|日付|内容|\n|-|-|-|\n|行22|2026-11-23|%s|" % ("長" * 100))[0]
+        w = column_widths(t, 170.0, 12.0, 2.0)
+        assert w[0] >= 6 * 2.0 and w[1] >= 12 * 2.0 and sum(w) == pytest.approx(170.0)
+
+    def test_many_columns_are_equal_when_the_minimum_does_not_fit(self):
+        t = parse_markdown("|" + "a|" * 40 + "\n|" + "-|" * 40)[0]
+        w = column_widths(t, 170.0, 15.0)
+        assert len(w) == 40 and sum(w) == pytest.approx(170.0) and min(w) > 0
+
+    def test_all_empty_cells(self):
+        assert sum(column_widths(parse_markdown("| | |\n|-|-|")[0], 100.0, 10.0)) == pytest.approx(100.0)
+
+
+class TestWrapRuns:
+    def _wrap(self, text, width, bold=False):
+        return ["".join(ch for ch, _ in line) for line in wrap_runs([Run(text, bold)], width, lambda ch: 1.0)]
+
+    def test_words_are_kept_together_and_spaces_at_the_break_are_dropped(self):
+        assert self._wrap("alpha bravo charlie", 6) == ["alpha", "bravo", "charli", "e"]
+        assert self._wrap("alpha bravo", 5) == ["alpha", "bravo"]
+        assert self._wrap("ab cd ef", 5) == ["ab cd", "ef"]
+
+    def test_japanese_breaks_at_any_character(self):
+        assert self._wrap("日本語の文章", 4) == ["日本語の", "文章"]
+        assert self._wrap("日本abc語", 4) == ["日本", "abc語"]
+
+    def test_newlines_and_empty(self):
+        assert self._wrap("a\n\nb", 5) == ["a", "", "b"]
+        assert wrap_runs([], 5, lambda ch: 1.0) == [[]]
+
+    def test_at_least_one_character_per_line(self):
+        assert self._wrap("ab漢", 0.5) == ["a", "b", "漢"]
+
+    def test_bold_is_kept_and_a_word_may_change_weight_inside(self):
+        lines = wrap_runs([Run("x ab"), Run("cd", True)], 4, lambda ch: 1.0)
+        assert lines == [[("x", False)], [("a", False), ("b", False), ("c", True), ("d", True)]]
+
+
+class TestTableDocx:
+    MD = "前文\n\n| 項目 | 値 | 備考 |\n|:--|:-:|--:|\n| a | **太** | 1<br>2 |\n| b |\n\n後文"
+
+    def _doc(self, md):
+        from docx import Document
+        return Document(io.BytesIO(markdown_to_docx(md)))
+
+    def _cells(self, table):
+        return [[c.text for c in row.cells] for row in table.rows]
+
+    def test_table_content(self):
+        doc = self._doc(self.MD)
+        assert [self._cells(t) for t in doc.tables] == [[["項目", "値", "備考"], ["a", "太", "1\n2"], ["b", "", ""]]]
+        assert doc.tables[0].style.name == "Table Grid"
+        assert [p.text for p in doc.paragraphs] == ["前文", "後文"]
+        assert not any("|" in p.text for p in doc.paragraphs)
+
+    def test_header_row_is_bold_shaded_and_repeated(self):
+        from docx.oxml.ns import qn
+        t = self._doc(self.MD).tables[0]
+        head, body = t.rows[0], t.rows[1]
+        assert all(r.bold for c in head.cells for p in c.paragraphs for r in p.runs)
+        assert [c._tc.tcPr.find(qn("w:shd")).get(qn("w:fill")) for c in head.cells] == ["F2F2F2"] * 3
+        assert head._tr.trPr.find(qn("w:tblHeader")) is not None
+        assert all(c._tc.tcPr.find(qn("w:shd")) is None for c in body.cells)
+        assert body._tr.trPr is None or body._tr.trPr.find(qn("w:tblHeader")) is None
+        assert [bool(r.bold) for c in body.cells for r in c.paragraphs[0].runs] == [False, True, False]
+
+    def test_short_rows_are_not_split_but_tall_rows_can_be(self):
+        from docx.oxml.ns import qn
+        t = self._doc("| a | b |\n|---|---|\n| 1 | 2 |\n| 3 | %s |" % ("長" * 3000)).tables[0]
+        flags = [row._tr.trPr is not None and row._tr.trPr.find(qn("w:cantSplit")) is not None for row in t.rows]
+        assert flags == [True, True, False]
+        assert all(c.paragraphs[0].paragraph_format.keep_with_next for c in t.rows[0].cells)
+
+    def test_crowded_table_uses_small_text_and_margins(self):
+        from docx.oxml.ns import qn
+        md = "|" + "列|" * 40 + "\n|" + "-|" * 40 + "\n|" + "値|" * 40
+        t = self._doc(md).tables[0]
+        assert t.rows[1].cells[0].paragraphs[0].runs[0].font.size.pt == 5
+        tags = [e.tag.split("}")[1] for e in t._tbl.tblPr]
+        assert tags.index("tblLayout") + 1 == tags.index("tblCellMar") < tags.index("tblLook")
+        # 普通の表は既定の文字の大きさ・余白のまま
+        t = self._doc(self.MD).tables[0]
+        assert t._tbl.tblPr.find(qn("w:tblCellMar")) is None
+        assert t.rows[1].cells[0].paragraphs[0].runs[0].font.size is None
+
+    def test_grid_borders_are_black(self):
+        from docx.oxml.ns import qn
+        doc = self._doc(self.MD)
+        borders = doc.styles["Table Grid"].element.find(qn("w:tblPr")).find(qn("w:tblBorders"))
+        assert len(borders) == 6
+        assert all(b.get(qn("w:color")) in ("auto", "000000") and b.get(qn("w:val")) == "single" for b in borders)
+
+    def test_schema_order_of_cell_properties(self):
+        """w:shd は w:tcW の後に置く（順序が崩れると Word が修復を求める）"""
+        t = self._doc(self.MD).tables[0]
+        assert [c.tag.split("}")[1] for c in t.rows[0].cells[0]._tc.tcPr] == ["tcW", "shd"]
+
+    def test_alignment(self):
+        from docx.enum.text import WD_ALIGN_PARAGRAPH as A
+        t = self._doc(self.MD).tables[0]
+        for row in t.rows:
+            assert [c.paragraphs[0].alignment for c in row.cells] in ([None, A.CENTER, A.RIGHT],
+                                                                      [A.LEFT, A.CENTER, A.RIGHT])
+
+    def test_runs_have_no_color(self):
+        t = self._doc(self.MD).tables[0]
+        assert all(r.font.color.type is None for row in t.rows for c in row.cells for p in c.paragraphs for r in p.runs)
+
+    def test_widths_fill_the_page_and_are_fixed(self):
+        doc = self._doc(self.MD)
+        t, s = doc.tables[0], doc.sections[0]
+        body = s.page_width - s.left_margin - s.right_margin
+        assert t.autofit is False
+        assert abs(sum(c.width for c in t.columns) - body) < 5000
+        assert [c.width for c in t.rows[1].cells] == [c.width for c in t.columns]
+
+    def _body_tags(self, doc):
+        return [e.tag.split("}")[1] for e in doc.element.body]
+
+    @pytest.mark.parametrize("gap", ["\n\n", "\n---\n"])
+    def test_consecutive_tables_stay_separate(self, gap):
+        one = "| a | b |\n|---|---|\n| 1 | 2 |"
+        doc = self._doc(one + gap + one)
+        assert len(doc.tables) == 2
+        assert self._body_tags(doc) == ["tbl", "p", "tbl", "p", "sectPr"]
+
+    def test_document_ending_with_a_table_has_a_last_paragraph(self):
+        assert self._body_tags(self._doc("| a |\n|---|\n| 1 |")) == ["tbl", "p", "sectPr"]
+
+    def test_no_extra_paragraph_when_text_follows(self):
+        assert self._body_tags(self._doc("| a |\n|---|\n| 1 |\n本文")) == ["tbl", "p", "sectPr"]
+
+    def test_columns_over_the_word_limit_are_merged_into_the_last_one(self):
+        """Word の表は63列まで。超える分は最後の列へまとめ、文字は捨てない"""
+        md = "|" + "列|" * 70 + "\n|" + "-|" * 70 + "\n|" + "値|" * 70
+        t = self._doc(md).tables[0]
+        assert len(t.columns) == 63
+        assert t.rows[1].cells[-1].text == " | ".join(["値"] * 8)
+
+
+class TestTablePdf:
+    def _pages(self, md):
+        from pypdf import PdfReader
+        return [p.extract_text() for p in PdfReader(io.BytesIO(markdown_to_pdf(md))).pages]
+
+    def _flat(self, md):
+        return "".join("".join(self._pages(md)).split())
+
+    def test_cells_are_drawn_without_pipes(self):
+        text = self._flat("前文\n\n| 項目 | 値 |\n|---|---|\n| りんご | **百円** |\n\n後文")
+        assert "|" not in text and "--" not in text
+        for word in ("前文", "項目", "値", "りんご", "百円", "後文"):
+            assert word in text
+
+    def test_grid_and_header_background(self):
+        import re
+
+        from pypdf import PdfReader
+        pdf = markdown_to_pdf("| a | b |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |")
+        data = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
+        assert len(re.findall(r" re\s+[SBfFb]", data)) >= 6
+        assert "0.949 0.949 0.949 rg" in data  # F2F2F2 = 242/255
+        assert "2 Tr" in data  # 見出しの擬似太字
+
+    def test_header_is_repeated_on_every_page(self):
+        rows = "\n".join(f"| 行{i} | 内容 |" for i in range(120))
+        pages = self._pages(f"| 見出列 | 説明列 |\n|---|---|\n{rows}")
+        assert len(pages) > 2
+        assert all(p.count("見出列") == 1 and "説明列" in p for p in pages)
+        text = "".join(pages)
+        assert all(f"行{i}" in text for i in range(120))
+
+    def test_header_is_not_left_alone_at_the_page_bottom(self):
+        for n in range(32, 42):
+            body = "\n".join("本文の行です。" for _ in range(n))
+            pages = self._pages(f"{body}\n| 見出列 | 説明列 |\n|---|---|\n| 最初 | 内容 |")
+            page = next(p for p in pages if "見出列" in p)
+            assert "最初" in page, n
+            assert sum("見出列" in p for p in pages) == 1, n
+
+    def test_heading_stays_with_the_table(self):
+        for n in range(28, 42):
+            body = "\n".join("本文の行です。" for _ in range(n))
+            pages = self._pages(f"{body}\n# 表の題\n\n| 見出列 | 説明列 |\n|---|---|\n| 最初 | 内容 |")
+            page = next(p for p in pages if "表の題" in p)
+            assert "最初" in page, n
+
+    @pytest.mark.parametrize("heads", [
+        "## 親の題\n### 子の題",
+        "## 親の題\n\n### 子の題",
+        "# 親の題\n## 中の題\n### 子の題",
+    ])
+    @pytest.mark.parametrize("cell", ["内容", "あ" * 600, "長" * 5000])
+    def test_consecutive_headings_stay_with_the_table(self, heads, cell):
+        for n in range(16, 42, 1 if len(cell) < 10 else 3):
+            body = "\n".join("本文の行です。" for _ in range(n))
+            pages = self._pages(f"{body}\n{heads}\n\n| 見出列 | 説明列 |\n|---|---|\n| 最初 | {cell} |")
+            page = next(p for p in pages if "親の題" in p)
+            assert "子の題" in page and "見出列" in page and "最初" in page, n
+
+    def test_consecutive_headings_stay_with_the_text(self):
+        for n in range(24, 42):
+            pages = self._pages("本文の行です。\n" * n + "# 親の題\n## 子の題\n直後の文")
+            assert "直後の文" in next(p for p in pages if "親の題" in p), n
+
+    def test_many_headings_do_not_waste_pages(self):
+        assert len(self._pages("\n".join(f"# 見出し{i}" for i in range(60)))) <= 5
+
+    @pytest.mark.parametrize("lines", range(40, 52))
+    @pytest.mark.parametrize("where", ["header", "row"])
+    def test_heading_is_not_left_alone_before_a_row_as_tall_as_a_page(self, lines, where):
+        tall = "<br>".join(f"z{i}" for i in range(lines))
+        head, row = (tall, "x") if where == "header" else ("見出列", tall)
+        pages = self._pages(f"# 題\n\n| a | {head} |\n|---|---|\n| x | {row} |\n| 次 | 次 |")
+        assert "z0" in pages[0]
+        assert "".join(pages).count("z") == lines
+
+    def test_row_taller_than_a_page_is_split(self):
+        long = "".join(f"{i:04d}番" for i in range(1500))
+        pages = self._pages(f"| 見出列 | 説明列 |\n|---|---|\n| 甲 | {long} |\n| 乙 | 終わり |\n\n後文")
+        assert len(pages) > 1 and all("見出列" in p for p in pages)
+        text = "".join("".join(pages).split())
+        assert "終わり" in text and "後文" in text and text.count("番") == 1500
+
+    def test_header_taller_than_half_a_page_is_not_repeated(self):
+        rows = "\n".join(f"| 行{i} | x |" for i in range(80))
+        text = self._flat(f"| {'頭' * 3000} | b |\n|---|---|\n{rows}")
+        assert text.count("頭") == 3000 and "行79" in text
+
+    @pytest.mark.parametrize("cols", [1, 10, 40, 200])
+    def test_any_number_of_columns(self, cols):
+        md = "|" + "見出し|" * cols + "\n|" + "-|" * cols + ("\n|" + "値あ1|" * cols) * 3
+        assert self._flat(md).count("値") == cols * 3
+
+    def test_long_word_emoji_control_and_br(self):
+        word = "Supercalifragilistic" * 20
+        text = self._flat(f"| a | b | c |\n|---|---|---|\n| {word} | 完了✅😀\t | 上<br>下 |\n| | | |")
+        assert "完了" in text and "上" in text and "下" in text and text.count("S") == 20
+
+    def test_japanese_wraps_by_character_and_english_by_word(self):
+        pages = self._pages("| k | v |\n|---|---|\n| 1 | " + "日本語の長い文章。" * 20 + " |\n| 2 | "
+                            + "alpha bravo " * 60 + "|")
+        text = "".join(pages)
+        assert "".join(text.split()).count("日本語の長い文章。") == 20
+        assert text.count("alpha") == 60 and text.count("bravo") == 60
+
+    def test_text_after_the_table_paginates_normally(self):
+        rows = "\n".join(f"| {i} | x |" for i in range(60))
+        pages = self._pages(f"| a | b |\n|---|---|\n{rows}\n\n" + "\n".join(f"後文{i}です。" for i in range(80)))
+        assert "後文0です。" in "".join(pages) and "後文79です。" in pages[-1]
+        assert "後文0です。" not in pages[-1]
+
+    def test_tall_first_row_adds_no_blank_page(self):
+        assert "長" in self._pages("| a | b |\n|---|---|\n| %s | x |" % ("長" * 4000))[0]
+
+    def test_consecutive_tables(self):
+        one = "| a%d | b |\n|---|---|\n| 1 | 2 |"
+        text = self._flat("\n\n".join(one % i for i in range(30)))
+        assert all(f"a{i}" in text for i in range(30))

@@ -25,6 +25,68 @@ function dedupeFiles(selected, incoming) {
 }
 // </dedupeFiles>
 
+// Markdownの表。判定規則は src_backends/output_formats.py の _parse_table と同じにする
+// （見出し行 + 区切り行で始まり、| を含まない行・見出し・リスト・引用・コードフェンスで終わる）。
+// lines[start] から表が始まれば { html, next }（next は表の次の行の位置）、表でなければ null を返す
+// <markdownTable>
+function markdownTable(lines, start) {
+  const PIPE = /(?<!\\)\|/;
+  const OTHER_BLOCK = [
+    /^\s*(\x60{3}|~~~)/, /^\s{0,3}#{1,6}\s+/, /^\s*[-*+\u30fb]\s+/, /^\s*\p{Nd}+[.)]\s+/u, /^\s*>/,
+  ];
+  const lineAt = (i) => (i < lines.length ? lines[i].replace(/^\ufeff+/, '').trimEnd() : '');
+  const isRow = (line) => PIPE.test(line) && !OTHER_BLOCK.some((r) => r.test(line));
+  const splitCells = (line) => {
+    let s = line.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+    return s.split(PIPE).map((c) => c.trim().replace(/\\\|/g, '|'));
+  };
+  const isSeparator = (line) => PIPE.test(line) && splitCells(line).every((c) => /^:?-+:?$/.test(c));
+  // セルの文字はエスケープしてから、太字・斜体・改行だけを戻す
+  const cellHtml = (text) => text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(?!\s)([^*]+?)(?<!\s)\*/g, '<em>$1</em>')
+    .replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
+  const head = lineAt(start);
+  const sep = lineAt(start + 1);
+  if (!isRow(head) || isSeparator(head) || !isSeparator(sep)) return null;
+
+  const header = splitCells(head);
+  const aligns = splitCells(sep).map((c) => {
+    if (!c.endsWith(':')) return '';
+    return c.startsWith(':') ? 'md-center' : 'md-right';
+  });
+  const rows = [];
+  let next = start + 2;
+  while (next < lines.length && isRow(lineAt(next))) {
+    const cells = splitCells(lineAt(next));
+    // 本文に繰り返された区切り行は捨てる（「-」だけのセルは「該当なし」の意味で使われるため残す）
+    if (!cells.every((c) => /^:?-{2,}:?$/.test(c))) rows.push(cells);
+    next += 1;
+  }
+
+  const columns = Math.max(header.length, ...rows.map((r) => r.length));
+  const rowHtml = (cells, tag) => {
+    let out = '<tr>';
+    for (let c = 0; c < columns; c += 1) {
+      const cls = aligns[c] ? ` class="${aligns[c]}"` : '';
+      out += `<${tag}${cls}>${cellHtml(cells[c] || '')}</${tag}>`;
+    }
+    return `${out}</tr>`;
+  };
+  const body = rows.length ? `<tbody>${rows.map((r) => rowHtml(r, 'td')).join('')}</tbody>` : '';
+  return {
+    html: `<div class="md-table"><table><thead>${rowHtml(header, 'th')}</thead>${body}</table></div>`,
+    next,
+  };
+}
+// </markdownTable>
+
 document.addEventListener('DOMContentLoaded', () => {
   // 画面を配信したサーバーと同じ場所へ接続する（既定のポートが使用中で別ポートへ移った場合にも動く）
   const API_BASE = '';
@@ -1160,7 +1222,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    lines.forEach((line) => {
+    let inFence = false;  // コードフェンスの中では表とみなさない
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      const isFence = /^\s*(\x60{3}|~~~)/.test(line);
+      if (isFence) inFence = !inFence;
+      const table = isFence || inFence ? null : markdownTable(lines, i);
+      if (table) {
+        closeList();
+        html.push(table.html);
+        i = table.next - 1;
+        continue;
+      }
       const h3 = line.match(/^### (.*)$/);
       const h2 = line.match(/^## (.*)$/);
       const h1 = line.match(/^# (.*)$/);
@@ -1186,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeList();
         html.push(line === '' ? '<br>' : `${inlineFormat(line)}<br>`);
       }
-    });
+    }
     closeList();
     return html.join('');
   }
