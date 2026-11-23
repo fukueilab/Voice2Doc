@@ -1,7 +1,23 @@
-"""配布物（PyInstaller）に含めるファイルのテスト"""
+"""配布物（PyInstaller）に含めるファイルと、同梱する依存のテスト"""
+import re
+from importlib import metadata
 from pathlib import Path
 
-SPEC = (Path(__file__).resolve().parent.parent / "voice2doc.spec").read_text(encoding="utf-8")
+ROOT = Path(__file__).resolve().parent.parent
+SPEC = (ROOT / "voice2doc.spec").read_text(encoding="utf-8")
+
+
+def test_starlette_is_pinned_to_a_version_without_known_vulnerabilities():
+    # fastapi 経由の間接的な依存のままだと、Dependabot の警告に出ず、古い版が入りうる
+    req = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    pinned = re.search(r"^starlette==(\d+)\.(\d+)\.(\d+)$", req, re.MULTILINE)
+    assert pinned and tuple(map(int, pinned.groups())) >= (1, 3, 1)
+
+
+def test_fastapi_does_not_pull_in_telemetry():
+    # 外部へ送信しないアプリなので、テレメトリーの部品（opentelemetry）を同梱しない
+    names = {re.match(r"[\w.-]+", r).group().lower() for r in metadata.requires("fastapi") if "extra ==" not in r}
+    assert "starlette" in names and "opentelemetry-api" not in names
 
 
 def test_whisper_data_files_are_bundled():

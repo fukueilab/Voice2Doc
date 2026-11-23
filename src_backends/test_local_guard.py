@@ -140,6 +140,22 @@ class TestStaticFiles:
         assert "markdownTable" in client.get("/app.js").text
         assert "<html" in client.get("/").text
 
+    def test_several_ranges_are_returned_completely(self, client):
+        # 古い starlette は、Content-Length と本文の長さが合わず、応答の途中で切れる
+        whole = client.get("/app.js").content
+        resp = client.get("/app.js", headers={"Range": "bytes=0-1,3-4"})
+        assert resp.status_code == 206
+        assert int(resp.headers["content-length"]) == len(resp.content)
+        assert whole[0:2] in resp.content and whole[3:5] in resp.content
+
+    def test_a_large_number_of_ranges_is_not_processed(self, client):
+        # 古い starlette は範囲の数の2乗の時間がかかり、その間ほかの要求に応えられない
+        size = len(client.get("/app.js").content)
+        ranges = ",".join(f"{i}-{i}" for i in range(0, 12000, 2))
+        resp = client.get("/app.js", headers={"Range": f"bytes={ranges}"})
+        assert resp.status_code in (200, 416)
+        assert len(resp.content) <= size
+
     def test_unknown_path_returns_index(self, client):
         assert "<html" in client.get("/no/such/page").text
 

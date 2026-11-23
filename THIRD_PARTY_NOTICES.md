@@ -27,6 +27,7 @@ Vibe, which the user installs (see section 2).
 | llama.cpp / ggml (inside llama-cpp-python) | MIT | https://github.com/ggml-org/llama.cpp |
 | huggingface-hub | Apache-2.0 | https://github.com/huggingface/huggingface_hub |
 | FastAPI | MIT | https://github.com/fastapi/fastapi |
+| Starlette (dependency of FastAPI) | BSD-3-Clause | https://github.com/Kludex/starlette |
 | Uvicorn | BSD-3-Clause | https://github.com/encode/uvicorn |
 | Pydantic | MIT | https://github.com/pydantic/pydantic |
 | HTTPX | BSD-3-Clause | https://github.com/encode/httpx |
@@ -43,7 +44,7 @@ Vibe, which the user installs (see section 2).
 Microsoft's Visual C++ runtime DLLs (`vcruntime140.dll`, `msvcp140.dll`, …) and the Universal CRT files that PyInstaller copies
 next to the app are redistributable files under the Microsoft Software License Terms of the Visual C++ Redistributable.
 
-Other, smaller dependencies (Starlette, anyio, h11, idna, click, typing-extensions, SymPy, NetworkX, mpmath, Jinja2, MarkupSafe,
+Other, smaller dependencies (annotated-doc, anyio, h11, idna, click, typing-extensions, SymPy, NetworkX, mpmath, Jinja2, MarkupSafe,
 PyYAML, requests, urllib3, rich, …) are MIT, BSD, Apache-2.0 or PSF licensed. The authoritative list of exact versions is [requirements.txt](requirements.txt) plus the packages they pull in;
 their license texts are available in each package's distribution. (Development-only tools — pytest, pytest-cov, pytest-asyncio, pypdf, ruff — are not shipped.)
 

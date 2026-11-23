@@ -24,7 +24,7 @@ RequestExecutionLevel user
 
 ; Application Info
 !define APP_NAME "Voice2Doc"
-!define APP_VERSION "1.0.0-beta.6"
+!define APP_VERSION "1.0.0-beta.7"
 !define APP_PUBLISHER "Fukuei Lab"
 !define APP_URL "https://www.8asue.com/fukuei/"
 !define APP_EXE "Voice2Doc.exe"

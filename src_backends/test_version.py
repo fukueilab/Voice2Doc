@@ -2,6 +2,8 @@
 import re
 from pathlib import Path
 
+import pytest
+
 from .config import APP_VERSION
 
 # semver.org 公式の正規表現
@@ -27,3 +29,11 @@ def test_installer_version_matches_app_version():
 def test_changelog_has_current_version():
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert f"## [{APP_VERSION}]" in changelog
+
+
+@pytest.mark.parametrize("name", ["README.md", "README.ja.md"])
+def test_readme_shows_current_version(name):
+    text = (ROOT / name).read_text(encoding="utf-8")
+    badge = APP_VERSION.replace("-", "--")  # shields.io のバッジでは、ハイフンを2つ重ねて書く
+    assert f"badge/version-{badge}-" in text
+    assert f"`{APP_VERSION}`" in text

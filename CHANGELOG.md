@@ -7,6 +7,13 @@ Pre-releases (`-beta.N`, `-rc.N`) are test builds before the stable version. See
 
 ## [Unreleased]
 
+## [1.0.0-beta.7] - 2026-11-24
+
+### Security
+- Updated `starlette` 0.46.2 → 1.7.0 and `fastapi` 0.115.12 → 0.141.1. `starlette` 0.46.2 had known vulnerabilities; some of
+  them affect the app's local server (crafted `Range` headers, large uploads and oversized form data could make it slow to
+  respond). `starlette` is now pinned in `requirements.txt`.
+
 ## [1.0.0-beta.6] - 2026-11-23
 
 ### Security
@@ -94,7 +101,8 @@ First public pre-release, for testing before the stable 1.0.0 release.
 - The installer is not code-signed, so Windows SmartScreen may warn, and Windows 11 Smart App Control blocks it when
   turned on (see the installation guide).
 
-[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.6...HEAD
+[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.7...HEAD
+[1.0.0-beta.7]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.6...v1.0.0-beta.7
 [1.0.0-beta.6]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.5...v1.0.0-beta.6
 [1.0.0-beta.5]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.4...v1.0.0-beta.5
 [1.0.0-beta.4]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.3...v1.0.0-beta.4
