@@ -1,6 +1,6 @@
 # 話書き (Voice2Doc) - 仕様書
 
-対象バージョン: 1.0.0-beta.7。この文書は現在の動作だけを記載する（変更の記録は [CHANGELOG.md](CHANGELOG.md)）。
+対象バージョン: 1.0.0-beta.8。この文書は現在の動作だけを記載する（変更の記録は [CHANGELOG.md](CHANGELOG.md)）。
 全体の概要は [docs/spec/voice2doc.md](docs/spec/voice2doc.md) を参照。
 
 ## 1. プロジェクト概要

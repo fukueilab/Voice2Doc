@@ -14,6 +14,10 @@ from .prompt_sets import default_prompt
 
 logger = logging.getLogger("voice2doc.local_llm")
 
+# huggingface_hub が、モデルの取得とは別に AI ツールの一覧を取得したり、利用環境の情報（PyTorch の版など）を
+# 送ったりしないようにする（import のときに読まれるため、最初に設定する）
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+
 # llama-cpp-python 設定
 LLAMACPP_MODEL_REPO = "unsloth/gemma-4-E2B-it-qat-GGUF"
 LLAMACPP_MODEL_FILENAME = "gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf"
@@ -104,7 +108,6 @@ def ensure_llamacpp_model_downloaded(progress_callback=None) -> Path:
             filename=LLAMACPP_MODEL_FILENAME,
             cache_dir=str(CACHE_DIR),
             local_dir=str(CACHE_DIR),
-            local_dir_use_symlinks=False,
         )
 
         downloaded_path = Path(path)

@@ -5,7 +5,7 @@
 **音声・動画ファイルやテキストから、校正済みの文章・企画書・報告書・お客様面談記録を、あなたの Windows PC 上で自動生成します。**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.0.0--beta.7-orange)
+![Version](https://img.shields.io/badge/version-1.0.0--beta.8-orange)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue)
 
 [English](README.md) | 日本語
@@ -26,7 +26,7 @@
 | [![話書き(Voice2Doc)の紹介動画（日本語）](https://img.youtube.com/vi/CuGJ9sUqLIM/hqdefault.jpg)](https://youtu.be/CuGJ9sUqLIM) | [![Voice2Doc の紹介動画（英語）](https://img.youtube.com/vi/kJETnFES1AQ/hqdefault.jpg)](https://youtu.be/kJETnFES1AQ) |
 | [YouTube で見る](https://youtu.be/CuGJ9sUqLIM) | [Watch on YouTube](https://youtu.be/kJETnFES1AQ) |
 
-> **テスト版（プレリリース）です。** 現在のバージョンは正式版 1.0.0 の前のテスト版 `1.0.0-beta.7` です。機能は一通り揃っていますが、不具合が残っている可能性があります。
+> **テスト版（プレリリース）です。** 現在のバージョンは正式版 1.0.0 の前のテスト版 `1.0.0-beta.8` です。機能は一通り揃っていますが、不具合が残っている可能性があります。
 >
 > **画面は日本語と英語に対応しています。** 初回起動ウィザードが Windows の言語から選び、「設定 → 環境設定 → 言語」でいつでも切り替えられます。編集していない初期プロンプトと音声認識の言語も、選んだ言語に合わせて入れ替わります。
 >

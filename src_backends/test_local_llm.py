@@ -1,4 +1,12 @@
 """Unit tests for local_llm.py (llama-cpp-python バックエンド)"""
+import hashlib
+import http.server
+import json
+import os
+import subprocess
+import sys
+import threading
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -57,6 +65,70 @@ class TestEnsureLlamacppModelDownloaded:
         with patch.dict("sys.modules", {"huggingface_hub": fake_module}):
             with pytest.raises(RuntimeError, match="network error"):
                 local_llm.ensure_llamacpp_model_downloaded()
+
+
+class TestModelDownloadWithHuggingfaceHub:
+    """本物の huggingface_hub で、手元の模擬サーバーからモデルを取得する（外部には接続しない）"""
+
+    DATA = b"model-bytes" * 1000
+    # huggingface_hub は import のときに環境変数を読むので、別のプロセスで動かす
+    SCRIPT = """
+import json, pathlib, sys, warnings
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    from src_backends import local_llm
+    local_llm.CACHE_DIR = pathlib.Path(sys.argv[1])
+    local_llm.LLAMACPP_MODEL_PATH = local_llm.CACHE_DIR / local_llm.LLAMACPP_MODEL_FILENAME
+    path = local_llm.ensure_llamacpp_model_downloaded()
+print(json.dumps({"path": str(path), "warnings": [str(w.message) for w in caught if "local_dir" in str(w.message)]}))
+"""
+
+    @pytest.fixture
+    def server(self):
+        data, requests = self.DATA, []
+        digest = hashlib.sha256(data).hexdigest()
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                requests.append((self.command, self.path.split("?")[0], self.headers.get("User-Agent", "")))
+                self.send_response(200)
+                for name, value in {"Content-Length": len(data), "ETag": f'"{digest}"', "X-Linked-Size": len(data),
+                                    "X-Linked-ETag": f'"{digest}"', "X-Repo-Commit": "a" * 40}.items():
+                    self.send_header(name, str(value))
+                self.end_headers()
+                if self.command == "GET":
+                    self.wfile.write(data)
+
+            do_HEAD = do_GET
+
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        yield httpd.server_port, requests
+        httpd.shutdown()
+        httpd.server_close()
+
+    def test_only_the_model_file_is_requested(self, server, tmp_path):
+        port, requests = server
+        env = {k: v for k, v in os.environ.items() if not k.upper().endswith(("_PROXY", "TELEMETRY", "DO_NOT_TRACK"))
+               and not k.startswith("HF_")}
+        env.update(HF_ENDPOINT=f"http://127.0.0.1:{port}", HF_HOME=str(tmp_path / "hf"), NO_PROXY="127.0.0.1",
+                   USERPROFILE=str(tmp_path), LOCALAPPDATA=str(tmp_path / "local"), AI_AGENT="test", PYTHONUTF8="1")
+        result = subprocess.run(
+            [sys.executable, "-c", self.SCRIPT, str(tmp_path / "cache")], env=env, capture_output=True, text=True,
+            encoding="utf-8", cwd=Path(__file__).resolve().parent.parent, timeout=120)
+        assert result.returncode == 0, result.stderr
+        out = json.loads(result.stdout.strip().splitlines()[-1])
+
+        assert Path(out["path"]) == tmp_path / "cache" / local_llm.LLAMACPP_MODEL_FILENAME
+        assert Path(out["path"]).read_bytes() == self.DATA
+        assert out["warnings"] == []
+        # モデルのファイル以外は取得せず、利用環境の情報（PyTorch の版・AI ツール名）も付けない
+        model = f"/{local_llm.LLAMACPP_MODEL_REPO}/resolve/main/{local_llm.LLAMACPP_MODEL_FILENAME}"
+        assert {path for _, path, _ in requests} == {model}
+        assert not [ua for _, _, ua in requests if "torch/" in ua or "agent/" in ua]
 
 
 class TestLlamaCppClient:
