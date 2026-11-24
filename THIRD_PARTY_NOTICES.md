@@ -31,6 +31,7 @@ Vibe, which the user installs (see section 2).
 | Uvicorn | BSD-3-Clause | https://github.com/encode/uvicorn |
 | Pydantic | MIT | https://github.com/pydantic/pydantic |
 | HTTPX | BSD-3-Clause | https://github.com/encode/httpx |
+| httpx2, httpcore2, truststore, hf-xet (dependencies of huggingface-hub) | BSD-3-Clause; BSD-3-Clause; MIT; Apache-2.0 | https://github.com/pydantic/httpx2 , https://github.com/sethmlarson/truststore , https://github.com/huggingface/xet-core |
 | python-multipart | Apache-2.0 | https://github.com/Kludex/python-multipart |
 | pywebview | BSD-3-Clause | https://github.com/r0x0r/pywebview |
 | Python | PSF License | https://www.python.org/ |

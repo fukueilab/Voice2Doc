@@ -1,6 +1,6 @@
 # Voice2Doc Installation Guide
 
-Applies to version: 1.0.0-beta.7 · Japanese version: [install-guide.md](install-guide.md)
+Applies to version: 1.0.0-beta.8 · Japanese version: [install-guide.md](install-guide.md)
 Distributed as: `Voice2Doc-Setup.exe` (NSIS installer, about 300 MB; under **Assets** of the newest version on the [Releases page](https://github.com/fukueilab/Voice2Doc/releases))
 
 ## 1. Requirements

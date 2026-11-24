@@ -14,6 +14,12 @@ def test_starlette_is_pinned_to_a_version_without_known_vulnerabilities():
     assert pinned and tuple(map(int, pinned.groups())) >= (1, 3, 1)
 
 
+def test_huggingface_hub_is_pinned():
+    # 固定しないと、ビルドのたびに最新が入り、確認していない版を配布することになる
+    req = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    assert re.search(r"^huggingface-hub==\d+\.\d+\.\d+$", req, re.MULTILINE)
+
+
 def test_fastapi_does_not_pull_in_telemetry():
     # 外部へ送信しないアプリなので、テレメトリーの部品（opentelemetry）を同梱しない
     names = {re.match(r"[\w.-]+", r).group().lower() for r in metadata.requires("fastapi") if "extra ==" not in r}

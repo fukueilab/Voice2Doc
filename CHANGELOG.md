@@ -7,6 +7,15 @@ Pre-releases (`-beta.N`, `-rc.N`) are test builds before the stable version. See
 
 ## [Unreleased]
 
+## [1.0.0-beta.8] - 2026-11-24
+
+### Changed
+- `huggingface-hub` is now pinned (2.4.0, the version bundled in beta.7). Before, every build bundled the latest version.
+
+### Fixed
+- When the local LLM model was downloaded, `huggingface-hub` also fetched a list of AI tools from Hugging Face and added
+  environment details (such as the PyTorch version) to its requests. Both are now turned off; no document content was sent.
+
 ## [1.0.0-beta.7] - 2026-11-24
 
 ### Security
@@ -101,7 +110,8 @@ First public pre-release, for testing before the stable 1.0.0 release.
 - The installer is not code-signed, so Windows SmartScreen may warn, and Windows 11 Smart App Control blocks it when
   turned on (see the installation guide).
 
-[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.7...HEAD
+[Unreleased]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.8...HEAD
+[1.0.0-beta.8]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.7...v1.0.0-beta.8
 [1.0.0-beta.7]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.6...v1.0.0-beta.7
 [1.0.0-beta.6]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.5...v1.0.0-beta.6
 [1.0.0-beta.5]: https://github.com/fukueilab/Voice2Doc/compare/v1.0.0-beta.4...v1.0.0-beta.5
